@@ -7,7 +7,7 @@ app.use(express.json());
 
 app.use("/auth", router);
 
-app.get("/", (req, res) => {
+app.get("/ping", (req, res) => {
   res.json({ message: "Absensi API running" });
 });
 
