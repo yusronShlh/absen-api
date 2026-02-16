@@ -6,8 +6,8 @@ const User = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    // untuk login (NISN/NIP/username admin)
-    username: { type: DataTypes.STRING, allowNull: false, unique: true },
+
+    username: { type: DataTypes.STRING, allowNull: true, unique: true },
     password: { type: DataTypes.STRING, allowNull: false },
     role: { type: DataTypes.ENUM("admin", "guru", "siswa") },
     // khusus siswa

@@ -1,15 +1,16 @@
-import AuthSvices from "../services/authServices.js";
+import AuthServices from "../services/authServices.js";
 
 class AuthController {
   static async login(req, res) {
     try {
-      const { username, password } = req.body;
-      if (!username || !password) {
+      const { identifier, password } = req.body;
+      // console.log({ identifier, password });
+      if (!identifier || !password) {
         return res
           .status(400)
-          .json({ message: "Username dan Password wajib di isi" });
+          .json({ message: "Username / NISN / NIP dan Password wajib di isi" });
       }
-      const result = await AuthSvices.login({ username, password });
+      const result = await AuthServices.login({ identifier, password });
       res.json(result);
     } catch (err) {
       res.status(400).json({ message: err.message });

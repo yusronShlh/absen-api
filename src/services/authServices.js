@@ -1,13 +1,23 @@
 import bcrypt, { hash } from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import { Op } from "sequelize";
 
-class AuthSvices {
+class AuthServices {
   static async login(data) {
-    const { username, password } = data;
+    const { identifier, password } = data;
+    // console.log("LOGIN REQUEST:", data);
 
-    const user = await User.findOne({ where: { username } });
-    if (!user) throw new Error("User tidak di temukan");
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username: identifier },
+          { nip: identifier },
+          { nisn: identifier },
+        ],
+      },
+    });
+    if (!user) throw new Error("Akun tidak di temukan");
 
     // cocokin password
     const match = await bcrypt.compare(password, user.password);
@@ -15,10 +25,13 @@ class AuthSvices {
 
     // buat token
     const token = jwt.sign(
-      { id: user.id, role: user.role, username: user.username },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES || "1d" },
     );
+
+    // console.log("TOKEN GENERATED:", token);
+    // console.log("SECRET USED:", process.env.JWT_SECRET);
 
     return {
       token,
@@ -34,4 +47,4 @@ class AuthSvices {
   }
 }
 
-export default AuthSvices;
+export default AuthServices;
