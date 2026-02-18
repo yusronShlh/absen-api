@@ -19,4 +19,12 @@ User.hasOne(Student, { foreignKey: "user_id", onDelete: "CASCADE" });
 Student.belongsTo(Class, { foreignKey: "class_id" });
 Class.hasMany(Student, { foreignKey: "class_id" });
 
+// class - homeroom
+Class.belongsTo(User, {
+  foreignKey: "homeroom_teacher_id",
+  as: "homeroomTeacher",
+});
+
+User.hasMany(Class, { foreignKey: "homeroom_teacher_id" });
+
 export default db;

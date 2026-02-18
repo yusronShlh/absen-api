@@ -1,6 +1,6 @@
 import express from "express";
 import teacherController from "../controllers/teacherController.js";
-import authMiddleware from "../middlewares/authMiddleware..js";
+import authMiddleware from "../middlewares/authMiddleware.js";
 import roleMiddleware from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
