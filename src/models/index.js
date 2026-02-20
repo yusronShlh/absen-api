@@ -1,6 +1,8 @@
 import sequelize from "../config/db.js";
 import Class from "./classModel.js";
+import LessonTime from "./lessonTimeModel.js";
 import Student from "./studentModel.js";
+import Subject from "./subjectModel.js";
 import User from "./userModel.js";
 
 const db = {};
@@ -8,6 +10,8 @@ db.sequelize = sequelize;
 db.User = User;
 db.Student = Student;
 db.Class = Class;
+db.Subject = Subject;
+db.LessonTime = LessonTime;
 
 // relations
 // User -student
@@ -26,5 +30,13 @@ Class.belongsTo(User, {
 });
 
 User.hasMany(Class, { foreignKey: "homeroom_teacher_id" });
+
+// class - subject
+Subject.belongsTo(Class, { foreignKey: "class_id" });
+Class.hasMany(Subject, { foreignKey: "class_id" });
+
+// teacher -subject
+Subject.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
+User.hasMany(Subject, { foreignKey: "teacher_id", as: "subjects" });
 
 export default db;
