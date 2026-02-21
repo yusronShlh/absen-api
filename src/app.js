@@ -6,6 +6,8 @@ import classRoutes from "./routes/classRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import lessonTimeRoutes from "./routes/lessonTimeRoutes.js";
 import ScheduleRoutes from "./routes/schedulesRoutes.js";
+import studentPermissionRoutes from "./routes/studentPermissionRoutes.js";
+import teacherPermissionRotes from "./routes/teacherPermissionRoutes.js";
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use("/api/admin/classes", classRoutes);
 app.use("/api/admin/subjects", subjectRoutes);
 app.use("/api/admin/lesson-times", lessonTimeRoutes);
 app.use("/api/admin/schedules", ScheduleRoutes);
+app.use("/api/admin/student-permissions", studentPermissionRoutes);
+app.use("/api/admin/teacher-permissions", teacherPermissionRotes);
 
 app.get("/ping", (req, res) => {
   res.json({ message: "Absensi API running" });

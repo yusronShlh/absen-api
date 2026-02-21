@@ -3,7 +3,9 @@ import Class from "./classModel.js";
 import LessonTime from "./lessonTimeModel.js";
 import Schedule from "./scheduleModel.js";
 import Student from "./studentModel.js";
+import StudentPermission from "./studentPermissionModel.js";
 import Subject from "./subjectModel.js";
+import TeacherPermission from "./teacherPermissionsModel.js";
 import User from "./userModel.js";
 
 const db = {};
@@ -14,6 +16,8 @@ db.Class = Class;
 db.Subject = Subject;
 db.LessonTime = LessonTime;
 db.Schedule = Schedule;
+db.StudentPermission = StudentPermission;
+db.TeacherPermission = TeacherPermission;
 
 // relations
 // User -student
@@ -58,5 +62,31 @@ Subject.hasMany(Schedule, { foreignKey: "subject_id" });
 // teacher - schedule
 Schedule.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
 User.hasMany(Schedule, { foreignKey: "teacher_id", as: "teachingSchedules" });
+
+// === STUDENT PERMISSIONS ===
+StudentPermission.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(StudentPermission, { foreignKey: "student_id" });
+
+// class
+StudentPermission.belongsTo(Class, { foreignKey: "class_id" });
+Class.hasMany(StudentPermission, { foreignKey: "class_id" });
+
+// approver
+StudentPermission.belongsTo(User, {
+  foreignKey: "approved_by",
+  as: "approver",
+});
+User.hasMany(StudentPermission, {
+  foreignKey: "approved_by",
+  as: "approvedPermissions",
+});
+
+// === TEACHER PERMISSION ===
+
+TeacherPermission.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
+User.hasMany(TeacherPermission, {
+  foreignKey: "teacher_id",
+  as: "teacherPermissions",
+});
 
 export default db;
