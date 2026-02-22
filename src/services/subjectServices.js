@@ -1,7 +1,7 @@
 import db from "../models/index.js";
 import { Op } from "sequelize";
 
-const { Subject, Class, User } = db;
+const { Subject, Class, User, Schedule } = db;
 
 class subjectServices {
   static async getAll(query) {
@@ -127,6 +127,14 @@ class subjectServices {
     console.log("check subcject", !!subject);
     if (!subject) {
       throw new Error("Mapel tidak di temukan");
+    }
+    // cek apakah masih dipakai di jadwal
+    const used = await Schedule.findOne({
+      where: { subject_id: id },
+    });
+
+    if (used) {
+      throw new Error("Mapel masih digunakan di jadwal, tidak bisa dihapus");
     }
 
     await subject.destroy();

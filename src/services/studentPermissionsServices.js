@@ -52,7 +52,7 @@ class StudentPermissionService {
 
     await data.update({
       status: "approved",
-      approve_by: adminId,
+      approved_by: adminId,
       approved_at: new Date(),
     });
     console.log("[SERVICE] Permission approved");
@@ -73,7 +73,7 @@ class StudentPermissionService {
 
     await data.update({
       status: "rejected",
-      approve_by: adminId,
+      approved_by: adminId,
       approved_at: new Date(),
     });
     return true;

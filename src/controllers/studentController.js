@@ -17,7 +17,7 @@ class studentController {
   static async create(req, res) {
     try {
       const { name, password, nisn, class_id, gender } = req.body;
-      if ((!name || !password || !nisn || !class_id, !gender)) {
+      if (!name || !password || !nisn || !class_id || !gender) {
         return res.status(400).json({ message: "Semua field wajib di isi" });
       }
 
@@ -32,7 +32,7 @@ class studentController {
   static async update(req, res) {
     try {
       const { name, nisn, class_id, gender } = req.body;
-      if ((!name || !nisn || !class_id, !gender)) {
+      if (!name || !nisn || !class_id || !gender) {
         return res.status(400).json({ message: "Semua field wajib di isi" });
       }
 

@@ -1,13 +1,13 @@
 import { where } from "sequelize";
 import db from "../models/index.js";
 //import { Class, User, Student } from "../models/index.js";
-const { Class, User, Student } = db;
+const { Class, User, Student, Schedule } = db;
 
 class classServices {
   static async getAll(query) {
     console.log("SERVICE getAll | query:", query);
 
-    const page = Number(query.page) || 1;
+    const page = Math.max(1, Number(query.page) || 1);
     const limit = Number(query.limit) || 10;
     const offset = (page - 1) * limit;
 
@@ -76,8 +76,15 @@ class classServices {
         throw new Error("Guru tidak valid");
       }
     }
+    if (name && name !== kelas.name) {
+      const exist = await Class.findOne({ where: { name } });
+
+      if (exist) {
+        throw new Error("Nama kelas sudah ada");
+      }
+    }
     await kelas.update({
-      name: name || kelas.name,
+      name: name ?? kelas.name,
       homeroom_teacher_id: homeroomTeacherId ?? kelas.homeroom_teacher_id,
     });
   }
@@ -93,16 +100,21 @@ class classServices {
       throw new Error("Kelas masih memiliki siswa");
     }
 
+    const schedule = await db.Schedule.count({ where: { class_id: id } });
+    if (schedule > 0) {
+      throw new Error("Kelas masiih memiliki jadwal");
+    }
+
     await kelas.destroy();
   }
 
   static async detail(id) {
     const kelas = await Class.findByPk(id, {
       include: [
-        { model: User, as: "homeroomTeacher", attibutes: ["id", "name"] },
+        { model: User, as: "homeroomTeacher", attributes: ["id", "name"] },
         {
           model: Student,
-          include: [{ model: User, attibutes: ["id", "name", "nisn"] }],
+          include: [{ model: User, attributes: ["id", "name", "nisn"] }],
         },
       ],
     });

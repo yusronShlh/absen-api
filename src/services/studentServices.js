@@ -2,14 +2,15 @@ import bcrypt from "bcryptjs";
 import Student from "../models/studentModel.js";
 import User from "../models/userModel.js";
 import Class from "../models/classModel.js";
+import sequelize from "../config/db.js";
 
 class StudentService {
   static async getAll(query) {
-    // console.log("QUERTY:", query);
+    console.log("QUERTY:", query);
 
     const { page = 1, limit = 10, class_id } = query;
 
-    //  console.log("Filter class_id:", class_id);
+    console.log("Filter class_id:", class_id);
 
     const where = {};
 
@@ -49,7 +50,6 @@ class StudentService {
       password: hash,
       username: null,
       role: "siswa",
-      nisn,
     });
 
     // buat siswa
@@ -81,14 +81,19 @@ class StudentService {
   }
 
   static async delete(id) {
-    const student = await Student.findByPk(id);
+    const t = await sequelize.transaction();
+    try {
+      const student = await Student.findByPk(id);
 
-    if (!student) {
-      throw new Error("Siswa tidak di temukan");
-    }
-    await User.destroy({ where: { id: student.user_id } });
+      if (!student) {
+        throw new Error("Siswa tidak di temukan");
+      }
+      await Student.destroy({ where: { id }, transaction: t });
+      await User.destroy({ where: { id: student.user_id }, transaction: t });
 
-    return true;
+      await t.commit();
+      return true;
+    } catch (err) {}
   }
 }
 

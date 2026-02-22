@@ -54,17 +54,21 @@ class teacherServices {
       throw new Error("Data guru tidak di temukan");
     }
 
-    if (teacher.role !== "guru") {
+    if (teacher.role !== "guru" && nip) {
       const exist = await User.findOne({ where: { nip, id: { [Op.ne]: id } } });
 
       if (exist) {
         throw new Error("NIP sudah di gunakan");
       }
+
+      // if (!name && !nip) {
+      //   throw new Error("Minimal satu field harus diubah");
+      // }
     }
 
     await teacher.update({
-      name: name || teacher.name,
-      nip: nip || teacher.nip,
+      name: name ?? teacher.name,
+      nip: nip ?? teacher.nip,
     });
   }
 
@@ -78,6 +82,14 @@ class teacherServices {
     if (teacher.role !== "guru") {
       console.log("Data ini bukan guru");
       throw new Error("Data ini bukan guru");
+    }
+
+    const hasSchedule = await db.Schedule.findOne({
+      where: { teacher_id: id },
+    });
+
+    if (hasSchedule) {
+      throw new Error("Guru masih memiliki jadwal aktif");
     }
 
     await teacher.destroy();

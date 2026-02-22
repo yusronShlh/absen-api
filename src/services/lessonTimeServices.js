@@ -37,7 +37,7 @@ class lessonTimeServices {
     console.log("SHIFT order from:", fromOrder);
 
     const times = await LessonTime.findAll({
-      where: { order: { $gte: fromOrder } },
+      where: { order: { [Op.gte]: fromOrder } },
       order: [["order", "DESC"]],
     });
 
@@ -64,6 +64,11 @@ class lessonTimeServices {
     if (conflict) {
       throw new Error("Waktu bentrok");
     }
+    const max = (await LessonTime.max("order")) || 0;
+
+    if (order > max + 1) {
+      throw new Error(`Urutan maksimal ${max + 1}`);
+    }
 
     await this.siftOrder(order);
 
@@ -88,19 +93,32 @@ class lessonTimeServices {
       throw new Error("Data tidak di temukan");
     }
 
-    const { order, name, start_time, end_time, type } = data;
+    // const { order, name, start_time, end_time, type } = data;
 
-    if (start_time && end_time) {
-      if (start_time >= end_time) {
-        throw new Error("Waktu tidak valid");
-      }
+    // if (start_time && end_time) {
+    //   if (start_time >= end_time) {
+    //     throw new Error("Waktu tidak valid");
+    //   }
 
-      const conflict = await this.checkOverlap(start_time, end_time, id);
+    //   const conflict = await this.checkOverlap(start_time, end_time, id);
 
-      if (conflict) {
-        throw new Error("Waktu bentrok ");
-      }
+    //   if (conflict) {
+    //     throw new Error("Waktu bentrok ");
+    //   }
+    // }
+    const newStart = start_time ?? lesson.start_time;
+    const newEnd = end_time ?? lesson.end_time;
+
+    if (newStart >= newEnd) {
+      throw new Error("Waktu tidak valid");
     }
+
+    const conflict = await this.checkOverlap(newStart, newEnd, id);
+
+    if (conflict) {
+      throw new Error("Waktu bentrok");
+    }
+
     if (order && order !== lesson.order) {
       await this.siftOrder(order);
     }
@@ -133,7 +151,7 @@ class lessonTimeServices {
     console.log("LESSON DELETED");
 
     const after = await LessonTime.findAll({
-      where: { order: { $gt: deleteOrder } },
+      where: { order: { [Op.gt]: deleteOrder } },
     });
 
     for (const time of after) {

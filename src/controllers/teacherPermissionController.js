@@ -1,7 +1,5 @@
 import TeacherPermissionServices from "../services/teacherPermissionServices.js";
 
-TeacherPermissionServices;
-
 class TeacherPermissionsController {
   static async getAll(req, res) {
     try {

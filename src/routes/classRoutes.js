@@ -12,9 +12,9 @@ router.get("/", classController.getAll);
 router.post("/", classController.create);
 router.put("/:id", classController.update);
 router.delete("/:id", classController.delete);
+router.get("/select/teachers", classController.select);
 router.get("/:id/detail", classController.detail);
 
 // selection guru
-router.get("/select/teachers", classController.select);
 
 export default router;

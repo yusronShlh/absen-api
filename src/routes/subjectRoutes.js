@@ -9,10 +9,10 @@ router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
 router.get("/", subjcetController.getAll);
+router.get("/form/options", subjcetController.formOptions);
 router.post("/", subjcetController.create);
 router.put("/:id", subjcetController.update);
 router.delete("/:id", subjcetController.delete);
 router.get("/:id", subjcetController.detail);
-router.get("/form/options", subjcetController.formOptions);
 
 export default router;
