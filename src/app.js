@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import router from "./routes/authRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import teacherRoutes from "./routes/teacherRoutes.js";
@@ -8,9 +9,10 @@ import lessonTimeRoutes from "./routes/lessonTimeRoutes.js";
 import ScheduleRoutes from "./routes/schedulesRoutes.js";
 import studentPermissionRoutes from "./routes/studentPermissionRoutes.js";
 import teacherPermissionRotes from "./routes/teacherPermissionRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 const app = express();
-
+app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", router);
@@ -22,6 +24,7 @@ app.use("/api/admin/lesson-times", lessonTimeRoutes);
 app.use("/api/admin/schedules", ScheduleRoutes);
 app.use("/api/admin/student-permissions", studentPermissionRoutes);
 app.use("/api/admin/teacher-permissions", teacherPermissionRotes);
+app.use("/api/admin/dashboard", dashboardRoutes);
 
 app.get("/ping", (req, res) => {
   res.json({ message: "Absensi API running" });
