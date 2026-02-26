@@ -9,6 +9,7 @@ router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
 router.get("/", studentController.getAll);
+router.get("/classes", studentController.classSelect);
 router.post("/", studentController.create);
 router.put("/:id", studentController.update);
 router.delete("/:id", studentController.delete);

@@ -58,6 +58,16 @@ class studentController {
       res.status(400).json({ message: err.message });
     }
   }
+
+  static async classSelect(req, res) {
+    try {
+      const data = await StudentService.getClass();
+
+      res.json({ data });
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
 }
 
 export default studentController;

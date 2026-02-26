@@ -95,6 +95,15 @@ class StudentService {
       return true;
     } catch (err) {}
   }
+
+  static async getClass() {
+    const classes = await Class.findAll({
+      attributes: ["id", "name"],
+      order: [["name", "ASC"]],
+    });
+
+    return classes;
+  }
 }
 
 export default StudentService;
