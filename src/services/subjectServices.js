@@ -9,17 +9,14 @@ class subjectServices {
 
     let { classId } = query;
 
-    if (!classId) {
-      const firstClass = await Class.findOne({ order: [["id", "ASC"]] });
+    const where = {};
 
-      if (!firstClass) {
-        throw new Error("Belum ada data kelas");
-      }
-      classId = firstClass.id;
-      console.log("Default Class:", classId);
+    // kalau ada classId → filter
+    if (classId) {
+      where.class_id = classId;
     }
     const subcjects = await Subject.findAll({
-      where: { class_id: classId },
+      where,
       include: [
         { model: User, as: "teacher", attributes: ["id", "name"] },
         { model: Class, attributes: ["id", "name"] },
