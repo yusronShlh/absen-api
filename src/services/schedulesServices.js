@@ -1,4 +1,5 @@
 import db from "../models/index.js";
+import { Op } from "sequelize";
 // import lessonTime from "../models/lessonTimeModel.js";
 
 const { Schedule, Class, Subject, LessonTime, User } = db;
@@ -127,23 +128,18 @@ class ScheduleService {
     // =========================
 
     if (day || class_id || teacher_id || lesson_time_id) {
-      const conflict = await Schedule.findOne({
+      // cek bentrok kelas
+      const classConflict = await Schedule.findOne({
         where: {
           id: { [Op.ne]: id },
-
           day: day || schedule.day,
-
           lesson_time_id: lesson_time_id || schedule.lesson_time_id,
-
-          [Op.or]: [
-            { class_id: class_id || schedule.class_id },
-            { teacher_id: teacher_id || schedule.teacher_id },
-          ],
+          class_id: class_id || schedule.class_id,
         },
       });
 
-      if (conflict) {
-        throw new Error("Jadwal bentrok dengan jadwal lain");
+      if (classConflict) {
+        throw new Error("Kelas sudah punya jadwal di jam ini");
       }
     }
 
@@ -196,7 +192,7 @@ class ScheduleService {
     console.log(`🔍 Classes fetched: ${classes.length} items`);
 
     const subjects = await Subject.findAll({
-      attributes: ["id", "name", "class_id", "teacher_id"],
+      attributes: ["id", "name"],
       order: [["name", "ASC"]],
     });
     console.log(`🔍 Subjects fetched: ${subjects.length} items`);

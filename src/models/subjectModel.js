@@ -5,14 +5,11 @@ const Subject = sequelize.define(
   "Subject",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    name: { type: DataTypes.STRING, allowNull: false },
-    class_id: { type: DataTypes.INTEGER, allowNull: false },
-    teacher_id: { type: DataTypes.INTEGER, allowNull: false },
+    name: { type: DataTypes.STRING, allowNull: false, unique: true },
   },
   {
     tableName: "subjects",
     timestamps: true,
-    indexes: [{ unique: true, fields: ["name", "class_id"] }],
   },
 );
 

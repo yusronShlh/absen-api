@@ -4,7 +4,7 @@ class subjcetController {
   static async getAll(req, res) {
     try {
       console.log("get subject | query:", req.query);
-      const data = await subjectServices.getAll(req.query);
+      const data = await subjectServices.getAll();
 
       res.json(data);
     } catch (err) {
@@ -62,20 +62,6 @@ class subjcetController {
       res.json(data);
     } catch (err) {
       console.log("error detail:", err.message);
-
-      res.status(400).json({ message: err.message });
-    }
-  }
-
-  static async formOptions(req, res) {
-    try {
-      console.log("get form options");
-
-      const data = await subjectServices.formOptions();
-
-      res.json(data);
-    } catch (err) {
-      console.log("error options:", err.message);
 
       res.status(400).json({ message: err.message });
     }

@@ -37,14 +37,6 @@ Class.belongsTo(User, {
 
 User.hasMany(Class, { foreignKey: "homeroom_teacher_id" });
 
-// class - subject
-Subject.belongsTo(Class, { foreignKey: "class_id" });
-Class.hasMany(Subject, { foreignKey: "class_id" });
-
-// teacher -subject
-Subject.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
-User.hasMany(Subject, { foreignKey: "teacher_id", as: "subjects" });
-
 // kelola jadwal
 
 // class -schedule
