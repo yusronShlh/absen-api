@@ -1,4 +1,6 @@
 import sequelize from "../config/db.js";
+import AttendanceDetail from "./attendanceDetailModel.js";
+import AttendanceSession from "./attendanceSessionsModel.js";
 import Class from "./classModel.js";
 import LessonTime from "./lessonTimeModel.js";
 import Schedule from "./scheduleModel.js";
@@ -18,6 +20,8 @@ db.LessonTime = LessonTime;
 db.Schedule = Schedule;
 db.StudentPermission = StudentPermission;
 db.TeacherPermission = TeacherPermission;
+db.AttendanceSession = AttendanceSession;
+db.AttendanceDetail = AttendanceDetail;
 
 // relations
 // User -student
@@ -80,5 +84,22 @@ User.hasMany(TeacherPermission, {
   foreignKey: "teacher_id",
   as: "teacherPermissions",
 });
+
+// ==== RELASI RELASI DI ROLE GURU  =====
+// schedule -> attendance sessions
+AttendanceSession.belongsTo(Schedule, { foreignKey: "schedule_id" });
+Schedule.hasMany(AttendanceSession, { foreignKey: "schedule_id" });
+
+// session -> detail
+AttendanceDetail.belongsTo(AttendanceSession, {
+  foreignKey: "attendance_session_id",
+});
+AttendanceSession.hasMany(AttendanceDetail, {
+  foreignKey: "attendance_session_id",
+});
+
+// student - detail
+AttendanceDetail.belongsTo(Student, { foreignKey: "student_id" });
+Student.hasMany(AttendanceDetail, { foreignKey: "student_id" });
 
 export default db;
