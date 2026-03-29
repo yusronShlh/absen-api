@@ -3,10 +3,12 @@ import AttendanceDetail from "./attendanceDetailModel.js";
 import AttendanceSession from "./attendanceSessionsModel.js";
 import Class from "./classModel.js";
 import LessonTime from "./lessonTimeModel.js";
+import PermissionType from "./permissionTypeModel.js";
 import Schedule from "./scheduleModel.js";
 import Student from "./studentModel.js";
 import StudentPermission from "./studentPermissionModel.js";
 import Subject from "./subjectModel.js";
+import TeacherPermissionDetail from "./teacherPermissionDetailModel.js";
 import TeacherPermission from "./teacherPermissionsModel.js";
 import User from "./userModel.js";
 
@@ -20,8 +22,10 @@ db.LessonTime = LessonTime;
 db.Schedule = Schedule;
 db.StudentPermission = StudentPermission;
 db.TeacherPermission = TeacherPermission;
+db.TeacherPermissionDetail = TeacherPermissionDetail;
 db.AttendanceSession = AttendanceSession;
 db.AttendanceDetail = AttendanceDetail;
+db.PermissionType = PermissionType;
 
 // relations
 // User -student
@@ -64,8 +68,8 @@ StudentPermission.belongsTo(Student, { foreignKey: "student_id" });
 Student.hasMany(StudentPermission, { foreignKey: "student_id" });
 
 // class
-StudentPermission.belongsTo(Class, { foreignKey: "class_id" });
-Class.hasMany(StudentPermission, { foreignKey: "class_id" });
+// StudentPermission.belongsTo(Class, { foreignKey: "class_id" });
+// Class.hasMany(StudentPermission, { foreignKey: "class_id" });
 
 // approver
 StudentPermission.belongsTo(User, {
@@ -85,7 +89,16 @@ User.hasMany(TeacherPermission, {
   as: "teacherPermissions",
 });
 
+TeacherPermission.hasMany(TeacherPermissionDetail, {
+  foreignKey: "permission_id",
+  as: "details",
+});
+TeacherPermissionDetail.belongsTo(TeacherPermission, {
+  foreignKey: "permission_id",
+});
+TeacherPermissionDetail.belongsTo(Schedule, { foreignKey: "schedule_id" });
 // ==== RELASI RELASI DI ROLE GURU  =====
+
 // schedule -> attendance sessions
 AttendanceSession.belongsTo(Schedule, { foreignKey: "schedule_id" });
 Schedule.hasMany(AttendanceSession, { foreignKey: "schedule_id" });
@@ -101,5 +114,11 @@ AttendanceSession.hasMany(AttendanceDetail, {
 // student - detail
 AttendanceDetail.belongsTo(Student, { foreignKey: "student_id" });
 Student.hasMany(AttendanceDetail, { foreignKey: "student_id" });
+
+// relasi permission type student
+StudentPermission.belongsTo(PermissionType, {
+  foreignKey: "permission_type_id",
+});
+PermissionType.hasMany(StudentPermission, { foreignKey: "permission_type_id" });
 
 export default db;

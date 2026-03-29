@@ -6,7 +6,9 @@ const TeacherPermission = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     teacher_id: { type: DataTypes.INTEGER, allowNull: false },
-    date: { type: DataTypes.DATEONLY, allowNull: false },
+    start_date: { type: DataTypes.DATEONLY, allowNull: false },
+    end_date: { type: DataTypes.DATEONLY, allowNull: false },
+    is_full_day: { type: DataTypes.BOOLEAN, defaultValue: true },
     reason: { type: DataTypes.STRING, allowNull: false },
     letter: { type: DataTypes.TEXT },
     status: {

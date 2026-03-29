@@ -9,6 +9,14 @@ class TeacherPermissionServices {
     const data = await TeacherPermission.findAll({
       include: [
         { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
+        {
+          model: db.TeacherPermissionDetail,
+          as: "details",
+          include: [
+            { model: db.Subject, attributes: ["name"] },
+            { model: db.LessonTime, attributes: ["start_time", "end_time"] },
+          ],
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -22,6 +30,16 @@ class TeacherPermissionServices {
     const data = await TeacherPermission.findByPk(id, {
       include: [
         { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
+        {
+          model: db.TeacherPermissionDetail,
+          as: "details",
+          include: [
+            {
+              model: db.Schedule,
+              include: [{ model: db.Subject }, { model: db.LessonTime }],
+            },
+          ],
+        },
       ],
     });
     if (!data) {

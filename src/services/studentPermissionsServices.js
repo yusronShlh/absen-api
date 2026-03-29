@@ -1,6 +1,15 @@
 import db from "../models/index.js";
 
-const { StudentPermission, Student, Class, User } = db;
+const {
+  StudentPermission,
+  Student,
+  Class,
+  User,
+  AttendanceDetail,
+  AttendanceSession,
+  Schedule,
+  PermissionType,
+} = db;
 
 class StudentPermissionService {
   static async getAll() {
@@ -10,9 +19,11 @@ class StudentPermissionService {
         {
           model: Student,
           attributes: ["id"],
-          include: [{ model: User, attributes: ["id", "name", "nisn"] }],
+          include: [
+            { model: User, attributes: ["id", "name", "nisn"] },
+            { model: Class, attributes: ["id", "name"] },
+          ],
         },
-        { model: Class, attributes: ["id", "name"] },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -26,9 +37,12 @@ class StudentPermissionService {
       include: [
         {
           model: Student,
-          include: [{ model: User, attributes: ["name", "nisn"] }],
+          include: [
+            { model: User, attributes: ["name", "nisn"] },
+            { model: Class, attributes: ["name"] },
+          ],
         },
-        { model: Class, attributes: ["name"] },
+
         { model: User, as: "approver", attributes: ["id", "name"] },
       ],
     });
@@ -50,12 +64,58 @@ class StudentPermissionService {
       throw new Error("Izin sudah di proses");
     }
 
+    const student = await Student.findByPk(data.student_id);
+    if (!student) {
+      throw new Error("Student / Siswa tidak di temukan");
+    }
+
+    const classId = student.class_id;
+
+    const type = await PermissionType.findByPk(data.permission_type_id);
+
+    const statusMap = type.name.toLowerCase() === "sakit" ? "sakit" : "izin";
+
     await data.update({
       status: "approved",
       approved_by: adminId,
       approved_at: new Date(),
     });
     console.log("[SERVICE] Permission approved");
+
+    let currentDate = new Date(data.start_date);
+    const endDate = new Date(Date.end_date);
+
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split("T")[0];
+      console.log("[SERVICE] Process date:", dateStr);
+
+      const sessions = await AttendanceSession.findAll({
+        include: [{ model: Schedule, where: { class_id: classId } }],
+        where: { date: dateStr },
+      });
+
+      for (const session of sessions) {
+        const existing = await AttendanceDetail.findOne({
+          where: { attendance_session_id: session.id, student_id: student.id },
+        });
+
+        if (existing) {
+          console.log(
+            `[SERVICE] Skip existing attendance (session ${session.id})`,
+          );
+          continue;
+        }
+
+        await AttendanceDetail.create({
+          attendance_session_id: session.id,
+          student_id: student.id,
+          status: statusMap,
+        });
+
+        console.log(`[SERVICE] Insert attendance (session ${session.id})`);
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
 
     return true;
   }

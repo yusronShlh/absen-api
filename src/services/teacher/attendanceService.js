@@ -1,5 +1,5 @@
+import { Op } from "sequelize";
 import db from "../../models/index.js";
-import lessonTime from "../../models/lessonTimeModel.js";
 
 const {
   Schedule,
@@ -10,6 +10,8 @@ const {
   User,
   AttendanceSession,
   AttendanceDetail,
+  StudentPermission,
+  PermissionType,
 } = db;
 
 class AttendaceService {
@@ -23,7 +25,7 @@ class AttendaceService {
       include: [
         { model: Class, attributes: ["id", "name"] },
         { model: Subject, attributes: ["id", "name"] },
-        { model: lessonTime, attributes: ["id", "start_time", "end_time"] },
+        { model: LessonTime, attributes: ["id", "start_time", "end_time"] },
       ],
       order: [[LessonTime, "order", "ASC"]],
     });
@@ -50,11 +52,43 @@ class AttendaceService {
       attributes: ["id"],
     });
 
-    return { schedule, students };
+    const today = new Date().toISOString().slice(0, 10);
+
+    const permissions = await StudentPermission.findAll({
+      where: {
+        student_id: { [Op.in]: students.map((s) => s.id) },
+        status: "approved",
+        start_date: { [Op.lte]: today },
+        end_date: { [Op.gte]: today },
+      },
+      include: [{ model: PermissionType, attributes: ["name"] }],
+    });
+
+    const studentWithStatus = students.map((s) => {
+      const permission = permissions.find((p) => p.student_id === s.id);
+
+      let status = null;
+
+      if (permission) {
+        status =
+          permission.PermissionType.name.toLowerCase() === "sakit"
+            ? "sakit"
+            : "izin";
+      }
+
+      return { id: s.id, name: s.User.name, status };
+    });
+
+    return { schedule, students: studentWithStatus };
   }
 
   static async submitAttendance(teacherId, body) {
-    const { schedule_id, date, attendaces } = body;
+    const { schedule_id, date, attendances } = body;
+    if (!attendances || !Array.isArray(attendances)) {
+      throw new Error("Format attendances tidak valid");
+    }
+
+    const formatedDate = new Date(date).toISOString().slice(0, 10);
 
     const schedule = await Schedule.findOne({
       where: { id: schedule_id, teacher_id: teacherId },
@@ -64,9 +98,9 @@ class AttendaceService {
     if (!schedule) {
       throw new Error("Jadwal tidak di temukan");
     }
+
     const now = new Date();
     const currentTime = now.toTimeString().slice(0, 5);
-
     const start = schedule.LessonTime.start_time.slice(0, 5);
     const end = schedule.LessonTime.end_time.slice(0, 5);
 
@@ -77,11 +111,25 @@ class AttendaceService {
     }
 
     const existing = await AttendanceSession.findOne({
-      where: { schedule_id, date },
+      where: { schedule_id, date: formatedDate },
     });
 
     if (existing) {
       throw new Error("Attendance already submitted");
+    }
+
+    // Validasi siswa
+    const students = await Student.findAll({
+      where: { class_id: schedule.class_id },
+      attributes: ["id"],
+    });
+
+    const studentIds = students.map((s) => s.id);
+
+    const isValid = attendances.every((a) => studentIds.includes(a.student_id));
+
+    if (!isValid) {
+      throw new Error("Ada student /siswa tidak valid");
     }
 
     const lastMeeting = await AttendanceSession.max("meeting_number", {
@@ -93,15 +141,45 @@ class AttendaceService {
     const session = await AttendanceSession.create({
       schedule_id,
       meeting_number: meetingNumber,
-      date,
+      date: formatedDate,
       created_by: teacherId,
+      is_teacher_present: true,
     });
 
-    const details = attendaces.map((a) => ({
-      attendace_session_id: session.id,
-      student_id: a.student_id,
-      status: a.status,
-    }));
+    const details = [];
+
+    const permissions = await StudentPermission.findAll({
+      where: {
+        student_id: { [Op.in]: attendances.map((a) => a.student_id) },
+        status: "approved",
+        start_date: { [Op.lte]: formatedDate },
+        end_date: { [Op.gte]: formatedDate },
+      },
+      include: [{ model: PermissionType, attributes: ["name"] }],
+    });
+
+    for (const a of attendances) {
+      // cek izin
+      const permission = permissions.find((p) => p.student_id === a.student_id);
+
+      let finalStatus = a.status;
+
+      if (permission) {
+        finalStatus =
+          permission.PermissionType.name.toLowerCase() === "sakit"
+            ? "sakit"
+            : "izin";
+        console.log(
+          `[ATTENDANCE] Override student ${a.student_id} → ${finalStatus}`,
+        );
+      }
+
+      details.push({
+        attendance_session_id: session.id,
+        student_id: a.student_id,
+        status: finalStatus,
+      });
+    }
 
     await AttendanceDetail.bulkCreate(details);
 
