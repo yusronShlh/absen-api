@@ -71,6 +71,8 @@ class MonitoringService {
 
       const permission = permissions.find((p) => p.teacher_id === s.teacher_id);
 
+      const is_submitted = !!session || !!permission;
+
       const now = new Date();
       const currentTime = now.toTimeString().slice(0, 5);
 
@@ -128,6 +130,8 @@ class MonitoringService {
           end_time: s.LessonTime.end_time,
         },
         status,
+
+        is_submitted,
       };
     });
 
