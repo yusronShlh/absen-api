@@ -56,6 +56,21 @@ class StudentPermissionController {
       res.status(500).json({ message: err.message });
     }
   }
+
+  static async getHistory(req, res) {
+    try {
+      const userId = req.user.id;
+
+      const data = await StudentPermissionService.getHistory(userId);
+
+      return res.json({
+        message: "Berhasil ambil data history izin siswa",
+        data,
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
 }
 
 export default StudentPermissionController;

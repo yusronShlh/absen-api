@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import db from "../../models/index.js";
 
-const { StudentPermission, PermissionType } = db;
+const { Student, StudentPermission, PermissionType } = db;
 
 class StudentPermissionService {
   static async create(data) {
@@ -61,6 +61,46 @@ class StudentPermissionService {
       attributes: ["id", "name"],
       order: [["id", "ASC"]],
     });
+  }
+
+  static async getHistory(userId) {
+    console.log("\n=== [SERVICE] STUDENT PERMISSION HISTORY ===");
+
+    const student = await Student.findOne({
+      where: { user_id: userId },
+      attributes: ["id"],
+    });
+
+    if (!student) {
+      throw new Error("Student tidak di temukan");
+    }
+    console.log("[DEBUG] Student ID:", student.id);
+
+    const permissions = await StudentPermission.findAll({
+      where: { student_id: student.id },
+      include: [{ model: PermissionType, attributes: ["name"] }],
+      order: [["createdAt", "DESC"]],
+    });
+    console.log("[DEBUG] Total permissions:", permissions.length);
+
+    const result = permissions.map((p) => {
+      const start = new Date(p.start_date);
+      const end = new Date(p.end_date);
+      const total_days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      return {
+        id: p.id,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        total_days,
+        type: p.PermissionType?.name || "-",
+        reason: p.reason,
+        status: p.status,
+        proof_file: p.proof_file,
+        approved_at: p.approved_at,
+      };
+    });
+    return result;
   }
 }
 

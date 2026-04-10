@@ -14,7 +14,7 @@ router.post(
   upload.single("proof_file"),
   StudentPermissionController.create,
 );
-
+router.get("/", StudentPermissionController.getHistory);
 router.get("/permission-types", StudentPermissionController.getTypes);
 
 export default router;

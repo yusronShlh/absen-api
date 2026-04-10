@@ -1,5 +1,11 @@
 import { Op } from "sequelize";
 import db from "../../models/index.js";
+import {
+  getWIBDate,
+  getWIBDateString,
+  getWIBDayName,
+  getWIBTimeString,
+} from "../../utils/timeHelper.js";
 
 const {
   Schedule,
@@ -16,9 +22,7 @@ const {
 
 class AttendaceService {
   static async getTodaySchedules(teacherId) {
-    const today = new Date()
-      .toLocaleDateString("id-ID", { weekday: "long" })
-      .toLowerCase();
+    const today = getWIBDayName();
 
     const schedules = await Schedule.findAll({
       where: { teacher_id: teacherId, day: today },
@@ -52,7 +56,7 @@ class AttendaceService {
       attributes: ["id"],
     });
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getWIBDateString();
 
     const permissions = await StudentPermission.findAll({
       where: {
@@ -88,7 +92,9 @@ class AttendaceService {
       throw new Error("Format attendances tidak valid");
     }
 
-    const formatedDate = new Date(date).toISOString().slice(0, 10);
+    const formatedDate = date
+      ? new Date(date).toISOString().slice(0, 10)
+      : getWIBDateString();
 
     const schedule = await Schedule.findOne({
       where: { id: schedule_id, teacher_id: teacherId },
@@ -99,8 +105,8 @@ class AttendaceService {
       throw new Error("Jadwal tidak di temukan");
     }
 
-    const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5);
+    // const now = new Date();
+    const currentTime = getWIBTimeString();
     const start = schedule.LessonTime.start_time.slice(0, 5);
     const end = schedule.LessonTime.end_time.slice(0, 5);
 

@@ -5,6 +5,7 @@ import Class from "./classModel.js";
 import LessonTime from "./lessonTimeModel.js";
 import PermissionType from "./permissionTypeModel.js";
 import Schedule from "./scheduleModel.js";
+import Semester from "./semesterModel.js";
 import Student from "./studentModel.js";
 import StudentPermission from "./studentPermissionModel.js";
 import Subject from "./subjectModel.js";
@@ -26,6 +27,7 @@ db.TeacherPermissionDetail = TeacherPermissionDetail;
 db.AttendanceSession = AttendanceSession;
 db.AttendanceDetail = AttendanceDetail;
 db.PermissionType = PermissionType;
+db.Semester = Semester;
 
 // relations
 // User -student

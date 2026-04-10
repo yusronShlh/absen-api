@@ -1,5 +1,6 @@
 import { Op, fn, col, literal } from "sequelize";
 import db from "../models/index.js";
+import { getWIBDateString } from "../utils/timeHelper.js";
 
 const {
   User,
@@ -12,7 +13,7 @@ const {
 
 class DashboardServices {
   static async getDashboardData() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getWIBDateString;
 
     // STATISTIK SISWA
     const totalStudents = await Student.count();
@@ -79,10 +80,18 @@ class DashboardServices {
     console.log("Get today permits...");
 
     const studentPermitsToday = await StudentPermission.count({
-      where: { date: today, status: "approved" },
+      where: {
+        status: "approved",
+        start_date: { [Op.lte]: today },
+        end_date: { [Op.gte]: today },
+      },
     });
     const teacherPermitsToday = await TeacherPermission.count({
-      where: { date: today, status: "approved" },
+      where: {
+        status: "approved",
+        start_date: { [Op.lte]: today },
+        end_date: { [Op.gte]: today },
+      },
     });
 
     console.log("Todays permits: ", {

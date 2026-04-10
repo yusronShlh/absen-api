@@ -13,8 +13,16 @@ class TeacherPermissionServices {
           model: db.TeacherPermissionDetail,
           as: "details",
           include: [
-            { model: db.Subject, attributes: ["name"] },
-            { model: db.LessonTime, attributes: ["start_time", "end_time"] },
+            {
+              model: db.Schedule,
+              include: [
+                { model: db.Subject, attributes: ["id", "name"] },
+                {
+                  model: db.LessonTime,
+                  attributes: ["start_time", "end_time"],
+                },
+              ],
+            },
           ],
         },
       ],
@@ -59,6 +67,16 @@ class TeacherPermissionServices {
 
     if (permission.status !== "pending") {
       throw new Error("Izin sudah di proses");
+    }
+
+    if (!permission.is_full_day) {
+      const details = await db.TeacherPermissionDetail.findAll({
+        where: { permission_id: permission.id },
+      });
+
+      if (!details.length) {
+        throw new Error("Detail jadwal izin tidak di temukan");
+      }
     }
 
     await permission.update({ status: "approved" });

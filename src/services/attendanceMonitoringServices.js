@@ -18,7 +18,14 @@ class MonitoringService {
     console.log("=== [SERVICE] Attendance Monitoring Start ===");
     console.log("[SERVICE] Input:", { date, class_id });
 
-    const selectDate = date || new Date().toISOString().slice(0, 10);
+    function getLocalDate() {
+      const now = new Date();
+      return new Date(now.getTime() + 7 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+    }
+
+    const selectDate = date || getLocalDate();
 
     const day = new Date(selectDate)
       .toLocaleDateString("id-ID", { weekday: "long" })
@@ -58,7 +65,7 @@ class MonitoringService {
 
     console.log("[SERVICE] Permissions found:", permissions.length);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDate();
     let dateType = "today";
 
     if (selectDate < today) dateType = "past";
