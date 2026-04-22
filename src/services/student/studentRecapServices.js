@@ -22,25 +22,44 @@ class StudentRecapService {
 
     const schedules = await Schedule.findAll({
       where: { class_id: student.class_id },
-      include: [{ model: Subject, attributes: ["name"] }],
+      include: [{ model: Subject, attributes: ["id", "name"] }],
+      raw: true,
     });
-    console.log("[RECAP] Total schedules:", schedules.length);
+    const map = new Map();
+
+    schedules.forEach((s) => {
+      const key = s.subject_id;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          subject_id: s.subject_id,
+          subject: s["Subject.name"],
+          scheduleIds: [],
+        });
+      }
+
+      map.get(key).scheduleIds.push(s.id);
+    });
+
+    const subjects = Array.from(map.values());
+    // console.log("[RECAP] Total schedules:", schedules.length);
 
     if (!semester_id) {
       console.log("[MODE] DEFAULT (TAHUN AJARAN AKTIF)");
-      return await this.getByAcademicYear(student, schedules);
+      return await this.getByAcademicYear(student, subjects);
     }
 
     console.log("[MODE] SEMESTER DETAIL");
-    return await this.getBySemester(student, schedules, semester_id);
+    return await this.getBySemester(student, subjects, semester_id);
   }
 
-  static async getByAcademicYear(student, schedules) {
+  static async getByAcademicYear(student, subjects) {
     const today = new Date().toISOString().slice(0, 10);
 
     const semester = await Semester.findOne({
       where: { start_date: { [Op.lte]: today }, end_date: { [Op.gte]: today } },
     });
+
     if (!semester) {
       throw new Error("Semester aktif tidak ditemukan");
     }
@@ -55,63 +74,62 @@ class StudentRecapService {
     );
 
     const start = sorted[0].start_date;
-    const end = sorted[semesters.length - 1].end_date;
+    const end = sorted[sorted.length - 1].end_date;
 
     console.log("[RECAP] Range:", start, "→", end);
 
-    const attendance = await AttendanceDetail.findAll({
-      attributes: [
-        "student_id",
-        [col("AttendanceSession.schedule_id"), "schedule_id"],
-        [fn("COUNT", col("AttendanceDetail.id")), "total"],
-        [
-          fn("SUM", literal(`CASE WHEN status='hadir' THEN 1 ELSE 0 END`)),
-          "hadir",
-        ],
-        [
-          fn("SUM", literal(`CASE WHEN status='izin' THEN 1 ELSE 0 END`)),
-          "izin",
-        ],
-        [
-          fn("SUM", literal(`CASE WHEN status='sakit' THEN 1 ELSE 0 END`)),
-          "sakit",
-        ],
-        [
-          fn("SUM", literal(`CASE WHEN status='alpha' THEN 1 ELSE 0 END`)),
-          "alpha",
-        ],
-      ],
-      include: [
-        {
-          model: AttendanceSession,
-          attributes: [],
-          where: { date: { [Op.between]: [start, end] } },
-        },
-      ],
-      where: { student_id: student.id },
-      group: ["AttendanceSession.schedule_id"],
-      raw: true,
-    });
+    const result = await Promise.all(
+      subjects.map(async (sub) => {
+        const attendance = await AttendanceDetail.findAll({
+          attributes: [
+            [fn("COUNT", col("AttendanceDetail.id")), "total"],
+            [
+              fn("SUM", literal(`CASE WHEN status='hadir' THEN 1 ELSE 0 END`)),
+              "hadir",
+            ],
+            [
+              fn("SUM", literal(`CASE WHEN status='izin' THEN 1 ELSE 0 END`)),
+              "izin",
+            ],
+            [
+              fn("SUM", literal(`CASE WHEN status='sakit' THEN 1 ELSE 0 END`)),
+              "sakit",
+            ],
+            [
+              fn("SUM", literal(`CASE WHEN status='alpha' THEN 1 ELSE 0 END`)),
+              "alpha",
+            ],
+          ],
+          include: [
+            {
+              model: AttendanceSession,
+              attributes: [],
+              where: {
+                schedule_id: { [Op.in]: sub.scheduleIds },
+                date: { [Op.between]: [start, end] },
+              },
+            },
+          ],
+          where: { student_id: student.id },
+          raw: true,
+        });
 
-    console.log("[RECAP] Raw attendance:", attendance.length);
+        const data = attendance[0] || {};
 
-    const result = schedules.map((s) => {
-      const found = attendance.find((a) => a.schedule_id === s.id);
-
-      return {
-        subject: s.Subject.name,
-        total: found ? parseInt(found.total) : 0,
-        hadir: found ? parseInt(found.hadir) : 0,
-        izin: found ? parseInt(found.izin) : 0,
-        sakit: found ? parseInt(found.sakit) : 0,
-        alpha: found ? parseInt(found.alpha) : 0,
-      };
-    });
-
+        return {
+          subject: sub.subject,
+          total: parseInt(data.total || 0),
+          hadir: parseInt(data.hadir || 0),
+          izin: parseInt(data.izin || 0),
+          sakit: parseInt(data.sakit || 0),
+          alpha: parseInt(data.alpha || 0),
+        };
+      }),
+    );
     return { mode: "summary", data: result };
   }
 
-  static async getBySemester(student, schedules, semester_id) {
+  static async getBySemester(student, subjects, semester_id) {
     const semester = await Semester.findByPk(semester_id);
 
     if (!semester) {
@@ -119,61 +137,59 @@ class StudentRecapService {
     }
     console.log("[RECAP] Semester:", semester.name);
 
-    const attendance = await AttendanceDetail.findAll({
-      attributes: [
-        "student_id",
-        [col("AttendanceSession.schedule_id"), "schedule_id"],
-        [col("AttendanceSession.meeting_number"), "meeting_number"],
-        "status",
-      ],
-      include: [
-        {
-          model: AttendanceSession,
-          attributes: [],
-          where: {
-            date: { [Op.between]: [semester.start_date, semester.end_date] },
-          },
-        },
-      ],
-      where: { student_id: student.id },
-      raw: true,
-    });
-    console.log("[RECAP] Raw attendance:", attendance.length);
+    const result = await Promise.all(
+      subjects.map(async (sub) => {
+        const attendance = await AttendanceDetail.findAll({
+          attributes: ["student_id", "status"],
+          include: [
+            {
+              model: AttendanceSession,
+              attributes: ["date"],
+              where: {
+                schedule_id: { [Op.in]: sub.scheduleIds },
+                date: {
+                  [Op.between]: [semester.start_date, semester.end_date],
+                },
+              },
+            },
+          ],
+          where: { student_id: student.id },
+          raw: true,
+        });
 
-    const maxMeeting =
-      Math.max(...attendance.map((a) => a.meeting_number), 0) || 0;
+        const uniqueDates = [
+          ...new Set(attendance.map((a) => a["AttendanceSession.date"])),
+        ].sort((a, b) => new Date(a) - new Date(b));
 
-    console.log("[RECAP] Max meeting:", maxMeeting);
+        let hadir = 0,
+          izin = 0,
+          sakit = 0,
+          alpha = 0;
 
-    const meetings = Array.from({ length: maxMeeting }, (_, i) => i + 1);
+        const pertemuan = uniqueDates.map((date) => {
+          const found = attendance.find(
+            (a) => a["AttendanceSession.date"] === date,
+          );
 
-    const result = schedules.map((s) => {
-      const pertemuan = [];
-      let hadir = 0,
-        izin = 0,
-        sakit = 0,
-        alpha = 0;
+          if (!found) return "-";
 
-      for (let i = 1; i <= maxMeeting; i++) {
-        const found = attendance.find(
-          (a) => a.schedule_id === s.id && a.meeting_number === i,
-        );
-
-        if (found) {
-          pertemuan.push(found.status);
           if (found.status === "hadir") hadir++;
           if (found.status === "izin") izin++;
           if (found.status === "sakit") sakit++;
           if (found.status === "alpha") alpha++;
-        } else {
-          pertemuan.push("-");
-        }
-      }
 
-      return { subject: s.Subject.name, pertemuan, hadir, izin, sakit, alpha };
-    });
+          return found.status;
+        });
 
-    return { mode: "detail", meetings, data: result };
+        return { subject: sub.subject, pertemuan, hadir, izin, sakit, alpha };
+      }),
+    );
+
+    return {
+      mode: "detail",
+      meetings: result[0]?.pertemuan.map((_, i) => i + 1) || [],
+      data: result,
+    };
   }
 
   static async getSemesterOptions() {

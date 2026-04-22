@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(authMiddleware);
 router.use(roleMiddleware("siswa"));
 
-router.get("/", StudentRecapController.getRecap);
 router.get("/semester", StudentRecapController.getSemesterOptions);
+router.get("/", StudentRecapController.getRecap);
 
 export default router;

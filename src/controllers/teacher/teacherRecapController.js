@@ -20,17 +20,18 @@ class TeacherRecapController {
   static async getDetail(req, res) {
     try {
       const teacher_id = req.user.id;
-      const { schedule_id } = req.params;
-      const { semester_id } = req.query;
+      const { subject_id, class_id, semester_id } = req.query;
 
       console.log("\n=== [CONTROLLER] RECAP DETAIL ===");
       console.log("Teacher:", teacher_id);
-      console.log("Schedule:", schedule_id);
+      console.log("Subjcet:", subject_id);
+      console.log("Class:", class_id);
       console.log("Semester:", semester_id);
 
       const data = await TeacherRecapService.getDetail({
         teacher_id,
-        schedule_id,
+        subject_id,
+        class_id,
         semester_id,
       });
 

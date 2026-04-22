@@ -10,6 +10,6 @@ router.use(roleMiddleware("guru"));
 
 router.get("/semester", TeacherRecapController.getSemesters);
 router.get("/", TeacherRecapController.getList);
-router.get("/:schedule_id", TeacherRecapController.getDetail);
+router.get("/detail", TeacherRecapController.getDetail);
 
 export default router;

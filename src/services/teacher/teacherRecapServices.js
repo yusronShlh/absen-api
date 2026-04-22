@@ -9,6 +9,7 @@ const {
   Semester,
   AttendanceSession,
   AttendanceDetail,
+  User,
 } = db;
 
 class TeacherRecapService {
@@ -18,44 +19,55 @@ class TeacherRecapService {
     const schedules = await Schedule.findAll({
       where: { teacher_id },
       include: [
-        { model: Subject, attributes: ["name"] },
-        { model: Class, attributes: ["name"] },
+        { model: Subject, attributes: ["id", "name"] },
+        { model: Class, attributes: ["id", "name"] },
       ],
+      raw: true,
     });
-    console.log("[LIST] Total schedules:", schedules.length);
+    console.log("[LIST] Raw schedules:", schedules.length);
 
-    const result = schedules.map((s) => ({
-      schedule_id: s.id,
-      subject: s.Subject.name,
-      class: s.Class.name,
-    }));
+    const map = new Map();
+    schedules.forEach((s) => {
+      const key = `${s.subject_id}-${s.class_id}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          subject_id: s.subject_id,
+          class_id: s.class_id,
+          subject: s["Subject.name"],
+          class: s["Class.name"],
+        });
+      }
+    });
+    const result = Array.from(map.values());
 
     return result;
   }
 
-  static async getDetail({ teacher_id, schedule_id, semester_id }) {
+  static async getDetail({ teacher_id, subject_id, class_id, semester_id }) {
     console.log("\n=== [SERVICE] TEACHER RECAP DETAIL ===");
 
     if (!semester_id) {
       throw new Error("Semester wajib di pilih");
     }
 
-    const schedule = await Schedule.findOne({
-      where: { id: schedule_id, teacher_id },
-      include: [
-        { model: Subject, attributes: ["name"] },
-        { model: Class, attributes: ["name"] },
-      ],
+    const schedules = await Schedule.findAll({
+      where: { teacher_id, subject_id, class_id },
     });
 
-    if (!schedule) {
-      throw new Error("Jadwal tidak di temukan/ bukan milik guru");
+    if (!schedules.length) {
+      throw new Error("Data jadwal tidak ditemukan");
     }
-    console.log("[DETAIL] Schedule:", schedule.id);
+    console.log("[DETAIL] Total Schedules:", schedules.id);
+
+    const scheduleIds = schedules.map((s) => s.id);
+
+    const subject = await Subject.findByPk(subject_id);
+    const kelas = await Class.findByPk(class_id);
 
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
-      include: [{ model: db.User, attributes: ["name"] }],
+      where: { class_id },
+      include: [{ model: User, attributes: ["name"] }],
     });
     console.log("[DETAIL] Total students:", students.length);
 
@@ -70,9 +82,9 @@ class TeacherRecapService {
       include: [
         {
           model: AttendanceSession,
-          attributes: ["meeting_number", "schedule_id"],
+          attributes: ["date", "schedule_id"],
           where: {
-            schedule_id,
+            schedule_id: { [Op.in]: scheduleIds },
             date: { [Op.between]: [semester.start_date, semester.end_date] },
           },
         },
@@ -81,14 +93,10 @@ class TeacherRecapService {
     });
     console.log("[DETAIL] Raw attendance:", attendance.length);
 
-    const maxMeeting =
-      Math.max(
-        ...attendance.map((a) => a["AttendanceSession.meeting_number"]),
-        0,
-      ) || 0;
-    console.log("[DETAIL] Max meeting:", maxMeeting);
-
-    const meetings = Array.from({ length: maxMeeting }, (_, i) => i + 1);
+    const uniqueDates = [
+      ...new Set(attendance.map((a) => a["AttendanceSession.date"])),
+    ].sort((a, b) => new Date(a) - new Date(b));
+    console.log("[DETAIL] Total meetings:", uniqueDates.length);
 
     const result = students.map((student) => {
       const pertemuan = [];
@@ -97,24 +105,23 @@ class TeacherRecapService {
         sakit = 0,
         alpha = 0;
 
-      for (let i = 1; i <= maxMeeting; i++) {
+      uniqueDates.forEach((date) => {
         const found = attendance.find(
           (a) =>
-            a.student_id === student.id &&
-            a["AttendanceSession.meeting_number"] === i,
+            a.student_id === student.id && a["AttendanceSession.date"] === date,
         );
 
         if (found) {
           pertemuan.push(found.status);
 
-          if (found.status === "hadir") hadir++;
-          if (found.status === "izin") izin++;
-          if (found.status === "sakit") sakit++;
-          if (found.status === "alpha") alpha++;
+          if (found.status == "hadir") hadir++;
+          if (found.status == "izin") izin++;
+          if (found.status == "sakit") sakit++;
+          if (found.status == "alpha") alpha++;
         } else {
           pertemuan.push("-");
         }
-      }
+      });
 
       return {
         student_name: student.User.name,
@@ -127,9 +134,10 @@ class TeacherRecapService {
     });
 
     return {
-      subject: schedule.Subject.name,
-      class: schedule.Class.name,
-      meetings,
+      subject: subject.name,
+      class: kelas.name,
+      meetings: uniqueDates.map((_, i) => i + 1),
+      // dates:uniqueDates,
       data: result,
     };
   }

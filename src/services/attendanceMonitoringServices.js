@@ -240,6 +240,120 @@ class MonitoringService {
 
     return true;
   }
+
+  static async getAttendanceDetail({ schedule_id, date }) {
+    console.log("=== [SERVICE] GET Attendance Detail Start ===");
+    console.log("[SERVICE] Input:", { schedule_id, date });
+
+    function getLocalDate() {
+      const now = new Date();
+      return new Date(now.getTime() + 7 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+    }
+
+    const selectDate = date || getLocalDate();
+
+    // 🔍 Ambil schedule + relasi
+    const schedule = await Schedule.findByPk(schedule_id, {
+      include: [
+        { model: Class, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "name"] },
+        {
+          model: LessonTime,
+          attributes: ["id", "name", "start_time", "end_time"],
+        },
+        { model: User, as: "teacher", attributes: ["id", "name"] },
+      ],
+    });
+
+    if (!schedule) {
+      console.log("[SERVICE] Schedule NOT FOUND");
+      throw new Error("Jadwal tidak ditemukan");
+    }
+
+    console.log("[SERVICE] Schedule found:", schedule.id);
+
+    // 👨‍🎓 Ambil semua siswa di kelas
+    const students = await Student.findAll({
+      where: { class_id: schedule.class_id },
+      attributes: ["id"],
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name"],
+        },
+      ],
+      order: [[User, "name", "ASC"]],
+    });
+
+    console.log("[SERVICE] Students found:", students.length);
+
+    // CCTV 🔥
+    if (students.length > 0) {
+      console.log(
+        "[SERVICE] Sample student:",
+        students[0].id,
+        students[0].User?.name,
+      );
+    }
+
+    console.log("[SERVICE] Students found:", students.length);
+
+    // 📘 Cek session
+    const session = await AttendanceSession.findOne({
+      where: { schedule_id, date: selectDate },
+    });
+
+    console.log("[SERVICE] Session:", session ? session.id : "NONE");
+
+    let detailsMap = {};
+
+    if (session) {
+      const details = await AttendanceDetail.findAll({
+        where: { attendance_session_id: session.id },
+      });
+
+      console.log("[SERVICE] Details found:", details.length);
+
+      details.forEach((d) => {
+        detailsMap[d.student_id] = d.status;
+      });
+    }
+
+    // 🧠 Mapping students + status
+    const studentData = students.map((s) => ({
+      student_id: s.id,
+      name: s.User?.name || "Tanpa Nama",
+      status: detailsMap[s.id] || "alpha",
+    }));
+
+    console.log("[SERVICE] Final student mapped:", studentData.length);
+
+    console.log("=== [SERVICE] GET Attendance Detail DONE ===");
+
+    return {
+      schedule: {
+        id: schedule.id,
+        class: schedule.Class,
+        subject: schedule.Subject,
+        teacher: schedule.teacher,
+        lesson_time: schedule.LessonTime,
+      },
+      date: selectDate,
+      is_teacher_present: session ? session.is_teacher_present : false,
+      students: studentData,
+    };
+  }
+
+  static async getClass() {
+    const classes = await Class.findAll({
+      attributes: ["id", "name"],
+      order: [["name", "ASC"]],
+    });
+
+    return classes;
+  }
 }
 
 export default MonitoringService;

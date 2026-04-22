@@ -8,7 +8,9 @@ const router = express.Router();
 router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
+router.get("/classes", MonitoringController.getClass);
 router.get("/", MonitoringController.getMonitoring);
+router.get("/:schedule_id/detail", MonitoringController.getAttendanceDetail);
 router.put("/", MonitoringController.editAttendance);
 
 export default router;
