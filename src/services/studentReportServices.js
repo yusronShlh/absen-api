@@ -12,39 +12,59 @@ const {
 } = db;
 
 class StudentReportService {
-  static async getReport({ class_id, schedule_id }) {
-    console.log("\n=== [SERVICE] STUDENT ATTENDANCE REPORT ===");
-    console.log("Class ID:", class_id);
-    console.log("Schedule ID:", schedule_id);
+  static async getReport({ class_id, subject_id }) {
+    console.log("\n=== [SERVICE] STUDENT REPORT START ===");
+    console.log("[SERVICE] Input:", { class_id, subject_id });
 
-    if (!schedule_id) {
+    if (!subject_id) {
       return await this.getReportByClass(class_id);
     } else {
-      return await this.getReportBySchedule(class_id, schedule_id);
+      return await this.getReportBySubject(class_id, subject_id);
     }
   }
 
+  // =========================================
+  // 🔥 MODE 1: CLASS (GROUP BY SUBJECT)
+  // =========================================
   static async getReportByClass(class_id) {
-    console.log("\n[MODE] REPORT BY CLASS (PIVOT MAPEL)");
+    console.log("\n[MODE] CLASS REPORT (GROUPED SUBJECT)");
 
     const schedules = await Schedule.findAll({
       where: { class_id },
       include: [{ model: Subject, attributes: ["id", "name"] }],
     });
 
-    const subjects = schedules.map((s) => ({
-      schedule_id: s.id,
-      subject_name: s.Subject.name,
-    }));
-    console.log("[DEBUG] Total schedules:", subjects.length);
+    console.log("[DEBUG] Total schedules:", schedules.length);
 
-    // ambil semua siswa
+    // 🔥 GROUP SUBJECT
+    const subjectMap = {};
+
+    schedules.forEach((s) => {
+      if (!subjectMap[s.subject_id]) {
+        subjectMap[s.subject_id] = {
+          subject_id: s.subject_id,
+          subject_name: s.Subject.name,
+          schedule_ids: [],
+        };
+      }
+      subjectMap[s.subject_id].schedule_ids.push(s.id);
+    });
+
+    const subjects = Object.values(subjectMap);
+
+    console.log("[DEBUG] Unique subjects:", subjects.length);
+
+    // 🔥 STUDENTS
     const students = await Student.findAll({
       where: { class_id },
       attributes: ["id"],
       include: [{ model: User, attributes: ["name"] }],
     });
+
     console.log("[DEBUG] Total students:", students.length);
+
+    // 🔥 ALL SCHEDULE IDS
+    const allScheduleIds = subjects.flatMap((s) => s.schedule_ids);
 
     const attendance = await AttendanceDetail.findAll({
       attributes: [
@@ -57,7 +77,7 @@ class StudentReportService {
           model: AttendanceSession,
           attributes: [],
           where: {
-            schedule_id: { [Op.in]: subjects.map((s) => s.schedule_id) },
+            schedule_id: { [Op.in]: allScheduleIds },
           },
         },
       ],
@@ -66,38 +86,59 @@ class StudentReportService {
       raw: true,
     });
 
-    console.log("[DEBUG] Raw attendance hadir:", attendance.length);
+    console.log("[DEBUG] Raw attendance:", attendance.length);
 
-    // build pivot
+    // 🔥 BUILD RESULT
     const result = students.map((student) => {
-      const row = { student_id: student.id, name: student.User.name };
+      const row = {
+        student_id: student.id,
+        name: student.User.name,
+      };
 
       subjects.forEach((subj) => {
-        const found = attendance.find(
-          (a) =>
-            a.student_id === student.id && a.schedule_id === subj.schedule_id,
-        );
-        row[subj.subject_name] = found ? parseInt(found.total_hadir) : 0;
+        const total = attendance
+          .filter(
+            (a) =>
+              a.student_id === student.id &&
+              subj.schedule_ids.includes(a.schedule_id),
+          )
+          .reduce((sum, a) => sum + parseInt(a.total_hadir), 0);
+
+        row[subj.subject_name] = total;
       });
+
       return row;
     });
-    return { subjects: subjects.map((s) => s.subject_name), data: result };
+
+    console.log("[SERVICE] CLASS REPORT DONE");
+
+    return {
+      subjects: subjects.map((s) => s.subject_name),
+      data: result,
+    };
   }
 
-  static async getReportBySchedule(class_id, schedule_id) {
-    console.log("\n[MODE] REPORT BY SCHEDULE (REKAP)");
+  // =========================================
+  // 🔥 MODE 2: SUBJECT (DETAIL)
+  // =========================================
+  static async getReportBySubject(class_id, subject_id) {
+    console.log("\n[MODE] SUBJECT REPORT");
 
-    const schedule = await Schedule.findOne({
-      where: { id: schedule_id, class_id },
+    const schedules = await Schedule.findAll({
+      where: { class_id, subject_id },
       include: [
         { model: Subject, attributes: ["name"] },
         { model: User, as: "teacher", attributes: ["name"] },
       ],
     });
 
-    if (!schedule) {
-      throw new Error("Schedule tidak di temukan di kelas ini");
+    if (!schedules.length) {
+      throw new Error("Subject tidak ditemukan di kelas ini");
     }
+
+    const scheduleIds = schedules.map((s) => s.id);
+
+    console.log("[DEBUG] Schedule count:", scheduleIds.length);
 
     const students = await Student.findAll({
       where: { class_id },
@@ -122,17 +163,24 @@ class StudentReportService {
           "sakit",
         ],
         [
-          fn("SUM", literal(`CASE WHEN status = 'alpha' THEN 1 ELSE 0 END`)),
+          fn("SUM", literal(`CASE WHEN status='alpha' THEN 1 ELSE 0 END`)),
           "alpha",
         ],
       ],
       include: [
-        { model: AttendanceSession, attributes: [], where: { schedule_id } },
+        {
+          model: AttendanceSession,
+          attributes: [],
+          where: {
+            schedule_id: { [Op.in]: scheduleIds },
+          },
+        },
       ],
       group: ["student_id"],
       raw: true,
     });
-    console.log("[DEBUG] Rekap attendance:", attendance.length);
+
+    console.log("[DEBUG] Attendance rows:", attendance.length);
 
     const result = students.map((student) => {
       const found = attendance.find((a) => a.student_id === student.id);
@@ -148,12 +196,52 @@ class StudentReportService {
       };
     });
 
+    console.log("[SERVICE] SUBJECT REPORT DONE");
+
     return {
-      schedule_id,
-      subject: schedule.Subject.name,
-      teacher: schedule.teacher.name,
+      subject_id,
+      subject: schedules[0].Subject.name,
       data: result,
     };
+  }
+
+  static async getClass() {
+    const classes = await Class.findAll({
+      attributes: ["id", "name"],
+      order: [["name", "ASC"]],
+    });
+
+    return classes;
+  }
+
+  static async getSubjectsByClass(class_id) {
+    console.log("\n=== [SERVICE] GET SUBJECTS BY CLASS ===");
+    console.log("[SERVICE] Class ID:", class_id);
+
+    const schedules = await Schedule.findAll({
+      where: { class_id },
+      include: [{ model: Subject, attributes: ["id", "name"] }],
+    });
+
+    console.log("[DEBUG] Total schedules:", schedules.length);
+
+    const map = {};
+
+    schedules.forEach((s) => {
+      if (!map[s.subject_id]) {
+        map[s.subject_id] = {
+          subject_id: s.subject_id,
+          subject_name: s.Subject.name,
+        };
+      }
+    });
+
+    const subjects = Object.values(map);
+
+    console.log("[DEBUG] Unique subjects:", subjects.length);
+    console.log("[SERVICE] DONE");
+
+    return subjects;
   }
 }
 

@@ -111,89 +111,101 @@ class TeacherReportService {
   }
 
   static async getDetailTeacher(start, end, teacher_id) {
-    console.log("\n[MODE] DETAIL TEACHER");
+    console.log("\n[MODE] DETAIL TEACHER (SQL GROUP)");
 
-    const schedules = await Schedule.findAll({
-      where: { teacher_id },
-      include: [
-        { model: Subject, attributes: ["name"] },
-        { model: Class, attributes: ["name"] },
-      ],
+    const query = `
+    SELECT 
+      CONCAT(sub.name, ' (', c.name, ')') AS subject,
+      
+      COUNT(ses.id) AS total_pertemuan,
+
+      SUM(
+        CASE 
+          WHEN tp.id IS NOT NULL THEN 0
+          WHEN ses.is_teacher_present = 1 THEN 1
+          ELSE 0
+        END
+      ) AS hadir,
+
+      SUM(
+        CASE 
+          WHEN tp.id IS NOT NULL THEN 1
+          ELSE 0
+        END
+      ) AS izin,
+
+      SUM(
+        CASE 
+          WHEN tp.id IS NULL AND ses.is_teacher_present = 0 THEN 1
+          ELSE 0
+        END
+      ) AS alpha
+
+    FROM schedules sc
+
+    LEFT JOIN subjects sub ON sc.subject_id = sub.id
+    LEFT JOIN classes c ON sc.class_id = c.id
+    LEFT JOIN attendance_sessions ses 
+      ON ses.schedule_id = sc.id 
+      AND ses.date BETWEEN :start AND :end
+
+    LEFT JOIN teacher_permissions tp
+      ON tp.teacher_id = sc.teacher_id
+      AND tp.status = 'approved'
+      AND ses.date BETWEEN tp.start_date AND tp.end_date
+
+    WHERE sc.teacher_id = :teacher_id
+
+    GROUP BY sc.subject_id, sc.class_id
+
+    ORDER BY sub.name ASC, c.name ASC
+  `;
+
+    console.log("[DEBUG] Executing SQL...");
+
+    const rows = await sequelize.query(query, {
+      replacements: { start, end, teacher_id },
+      type: sequelize.QueryTypes.SELECT,
     });
-    console.log("[DEBUG] Total schedules:", schedules.length);
 
-    const sessions = await AttendanceSession.findAll({
-      where: { date: { [Op.between]: [start, end] } },
-    });
+    console.log("[DEBUG] Rows:", rows.length);
 
-    const permissions = await TeacherPermission.findAll({
-      where: {
-        teacher_id,
-        status: "approved",
-        start_date: { [Op.lte]: end },
-        end_date: { [Op.gte]: start },
-      },
-    });
-    console.log("[DEBUG] Sessions:", sessions.length);
-    console.log("[DEBUG] Permissions:", permissions.length);
+    // 🔥 FORMAT + TOTAL
+    let no = 1;
+    let grand = { total: 0, hadir: 0, izin: 0, alpha: 0 };
 
-    let grandTotal = { total: 0, hadir: 0, izin: 0, alpha: 0 };
+    const result = rows.map((r) => {
+      const item = {
+        no: no++,
+        subject: r.subject,
+        total_pertemuan: Number(r.total_pertemuan),
+        hadir: Number(r.hadir),
+        izin: Number(r.izin),
+        alpha: Number(r.alpha),
+      };
 
-    const result = schedules.map((schedule, index) => {
-      let total = 0;
-      let hadir = 0;
-      let izin = 0;
-      let alpha = 0;
-
-      const scheduleSessions = sessions.filter(
-        (s) => s.schedule_id === schedule.id,
-      );
-
-      scheduleSessions.forEach((sess) => {
-        total++;
-
-        const hasPermission = permissions.find(
-          (p) => sess.date >= p.start_date && sess.date <= p.end_date,
-        );
-
-        if (hasPermission) {
-          izin++;
-        } else if (sess.is_teacher_present) {
-          hadir++;
-        } else {
-          alpha++;
-        }
-      });
-
-      grandTotal.total += total;
-      grandTotal.hadir += hadir;
-      grandTotal.izin += izin;
-      grandTotal.alpha += alpha;
-
-      const subjectName = `${schedule.Subject.name} (${schedule.Class.name})`;
+      grand.total += item.total_pertemuan;
+      grand.hadir += item.hadir;
+      grand.izin += item.izin;
+      grand.alpha += item.alpha;
 
       console.log(
-        `[DEBUG] ${subjectName} → total:${total}, hadir:${hadir}, izin:${izin}, alpha:${alpha}`,
+        `[DEBUG] ${item.subject} → total:${item.total_pertemuan}, hadir:${item.hadir}, izin:${item.izin}, alpha:${item.alpha}`,
       );
 
-      return {
-        no: index + 1,
-        subject: subjectName,
-        total_pertemuan: total,
-        hadir,
-        izin,
-        alpha,
-      };
+      return item;
     });
 
     result.push({
       no: null,
       subject: "TOTAL",
-      total_pertemuan: grandTotal.total,
-      hadir: grandTotal.hadir,
-      izin: grandTotal.izin,
-      alpha: grandTotal.alpha,
+      total_pertemuan: grand.total,
+      hadir: grand.hadir,
+      izin: grand.izin,
+      alpha: grand.alpha,
     });
+
+    console.log("=== [SERVICE] DONE SQL REPORT ===");
 
     return result;
   }
