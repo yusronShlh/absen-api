@@ -219,10 +219,22 @@ class AdminAttendanceServices {
       include: ["Class"],
     });
 
+    if (schedules.length === 0) {
+      console.log("[ADMIN] No schedules found, fallback to all classes");
+
+      const classes = await db.Class.findAll({
+        attributes: ["id", "name"],
+        order: [["name", "ASC"]],
+      });
+      return classes;
+    }
+
     const map = new Map();
 
     schedules.forEach((s) => {
-      map.set(s.Class.id, { id: s.Class.id, name: s.Class.name });
+      if (s.Class) {
+        map.set(s.Class.id, { id: s.Class.id, name: s.Class.name });
+      }
     });
     return Array.from(map.values());
   }
