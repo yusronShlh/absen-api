@@ -58,7 +58,13 @@ class StudentReportService {
     const students = await Student.findAll({
       where: { class_id },
       attributes: ["id"],
-      include: [{ model: User, attributes: ["name"] }],
+      include: [
+        {
+          model: User,
+          attributes: ["name"],
+          required: true, // hanya ambil user yang masih ada
+        },
+      ],
     });
 
     console.log("[DEBUG] Total students:", students.length);
@@ -92,7 +98,7 @@ class StudentReportService {
     const result = students.map((student) => {
       const row = {
         student_id: student.id,
-        name: student.User.name,
+        name: student.User?.name || "-",
       };
 
       subjects.forEach((subj) => {
@@ -143,7 +149,7 @@ class StudentReportService {
     const students = await Student.findAll({
       where: { class_id },
       attributes: ["id"],
-      include: [{ model: User, attributes: ["name"] }],
+      include: [{ model: User, attributes: ["name"], required: true }],
     });
 
     const attendance = await AttendanceDetail.findAll({
@@ -187,7 +193,7 @@ class StudentReportService {
 
       return {
         student_id: student.id,
-        name: student.User.name,
+        name: student.User.name || "-",
         total: found ? parseInt(found.total) : 0,
         hadir: found ? parseInt(found.hadir) : 0,
         izin: found ? parseInt(found.izin) : 0,

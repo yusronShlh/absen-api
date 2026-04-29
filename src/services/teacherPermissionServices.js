@@ -2,6 +2,12 @@ import db from "../models/index.js";
 
 const { TeacherPermission, User } = db;
 
+const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
+function buildFileUrl(file) {
+  if (!file) return null;
+  return `${BASE_URL}/uploads/teacher-permissions/${file}`;
+}
+
 class TeacherPermissionServices {
   static async getAll() {
     console.log("[SERVICE] getAll teacher permissions");
@@ -30,8 +36,15 @@ class TeacherPermissionServices {
     });
     console.log("✅ Total permissions:", data.length);
 
-    return data;
+    const result = data.map((item) => {
+      const obj = item.toJSON();
+      obj.letter = buildFileUrl(obj.letter);
+      return obj;
+    });
+
+    return result;
   }
+
   static async getById(id) {
     console.log("[SERVICE] getById:", id);
 
@@ -54,7 +67,11 @@ class TeacherPermissionServices {
       console.log("❌ Permission not found");
       throw new Error("Izin guru tidak di temukan");
     }
-    return data;
+    const result = data.toJSON();
+
+    result.letter = buildFileUrl(result.letter);
+
+    return result;
   }
 
   static async approve(id) {

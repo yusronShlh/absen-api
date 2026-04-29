@@ -52,7 +52,7 @@ class AttendaceService {
 
     const students = await Student.findAll({
       where: { class_id: schedule.class_id },
-      include: [{ model: User, attributes: ["id", "name"] }],
+      include: [{ model: User, attributes: ["id", "name"], required: true }],
       attributes: ["id"],
     });
 
@@ -128,6 +128,7 @@ class AttendaceService {
     const students = await Student.findAll({
       where: { class_id: schedule.class_id },
       attributes: ["id"],
+      include: [{ model: User, required: true }],
     });
 
     const studentIds = students.map((s) => s.id);

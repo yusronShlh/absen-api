@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 
 const uploadPath =
-  process.env.UPLOAD_STUDENTS || path.join("uploads", "teacher-permissions");
+  process.env.UPLOAD_STUDENTS || path.join("uploads", "student-permissions");
 
 if (!fs.existsSync(uploadPath)) {
   fs.mkdirSync(uploadPath, { recursive: true });

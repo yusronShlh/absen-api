@@ -15,7 +15,12 @@ const User = sequelize.define(
     // khusus guru
     nip: { type: DataTypes.STRING, allowNull: true, unique: true },
   },
-  { tableName: "users", timestamps: true },
+  {
+    tableName: "users",
+    timestamps: true,
+    paranoid: true,
+    deletedAt: "deleted_at",
+  },
 );
 
 export default User;

@@ -171,6 +171,7 @@ class MonitoringService {
     const students = await Student.findAll({
       where: { class_id: schedule.class_id },
       attributes: ["id"],
+      include: [{ model: User, required: true }],
     });
 
     const studentIds = students.map((s) => s.id);
@@ -282,6 +283,7 @@ class MonitoringService {
         {
           model: User,
           attributes: ["id", "name"],
+          required: true,
         },
       ],
       order: [[User, "name", "ASC"]],

@@ -25,7 +25,11 @@ class StudentService {
       offset,
 
       include: [
-        { model: User, attributes: ["id", "name", "nisn", "role"] },
+        {
+          model: User,
+          attributes: ["id", "name", "nisn", "role"],
+          required: true,
+        },
         { model: Class, attributes: ["id", "name"] },
       ],
     });
@@ -37,6 +41,7 @@ class StudentService {
     //cek username
     const exist = await User.findOne({
       where: { nisn },
+      paranoid: false,
     });
     if (exist) {
       throw new Error("NISN sudah di gunakan");
@@ -58,7 +63,9 @@ class StudentService {
   }
 
   static async update(id, payload) {
-    const student = await Student.findByPk(id, { include: User });
+    const student = await Student.findByPk(id, {
+      include: [{ model: User, required: true }],
+    });
 
     if (!student) {
       throw new Error("Siswa tidak di temukan");
@@ -67,7 +74,7 @@ class StudentService {
     const { name, nisn, class_id, gender } = payload;
     // cek NISN harus unik
     if (nisn !== student.User.nisn) {
-      const exist = await User.findOne({ where: { nisn } });
+      const exist = await User.findOne({ where: { nisn }, paranoid: false });
 
       if (exist) {
         throw new Error("NISN sudah di gunakan");
@@ -88,12 +95,15 @@ class StudentService {
       if (!student) {
         throw new Error("Siswa tidak di temukan");
       }
-      await Student.destroy({ where: { id }, transaction: t });
+
       await User.destroy({ where: { id: student.user_id }, transaction: t });
 
       await t.commit();
       return true;
-    } catch (err) {}
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
   }
 
   static async getClass() {

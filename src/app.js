@@ -22,10 +22,13 @@ import semesterRoutes from "./routes/semesterRoutes.js";
 import StudentDashboardRoutes from "./routes/student/studentDashboardRoutes.js";
 import StudentRecapRoutes from "./routes/student/studentRecapRoutes.js";
 import teacherRecapRoutes from "./routes/teacher/teacherRecapRoutes.js";
+import path from "path";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join("uploads")));
 
 app.use("/api/auth", router);
 app.use("/api/admin/students", studentRoutes);
@@ -52,8 +55,27 @@ app.use("/api/student/permissions", studentPermissionStudentRoutes);
 app.use("/api/student/dashboard", StudentDashboardRoutes);
 app.use("/api/student/recap", StudentRecapRoutes);
 
+app.use(express.static("public"));
+
 app.get("/ping", (req, res) => {
   res.json({ message: "Absensi API running" });
+});
+
+app.use((req, res, next) => {
+  res.status(404).json({ message: "Route tidak di temukan" });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  if (err.name === "SequelizeForeignKeyConstraintError") {
+    return res
+      .status(400)
+      .json({ message: "Data tidak bisa di hapus karena masih di gunakan" });
+  }
+  res
+    .status(err.status || 500)
+    .json({ message: err.message || "Internal Server Eror" });
 });
 
 export default app;

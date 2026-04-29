@@ -13,12 +13,20 @@ const {
 
 class DashboardServices {
   static async getDashboardData() {
-    const today = getWIBDateString;
+    const today = getWIBDateString();
 
     // STATISTIK SISWA
-    const totalStudents = await Student.count();
-    const maleStudents = await Student.count({ where: { gender: "L" } });
-    const femaleStudents = await Student.count({ where: { gender: "P" } });
+    const totalStudents = await Student.count({
+      include: [{ model: User, required: true, where: { deleted_at: null } }],
+    });
+    const maleStudents = await Student.count({
+      where: { gender: "L" },
+      include: [{ model: User, required: true, where: { deleted_at: null } }],
+    });
+    const femaleStudents = await Student.count({
+      where: { gender: "P" },
+      include: [{ model: User, required: true, where: { deleted_at: null } }],
+    });
 
     console.log("Students:", {
       total: totalStudents,
@@ -59,6 +67,14 @@ class DashboardServices {
           model: Student,
           attributes: [],
           required: false, //Left join
+          include: [
+            {
+              model: User,
+              attributes: [],
+              where: { deleted_at: null },
+              required: true,
+            },
+          ],
         },
       ],
 

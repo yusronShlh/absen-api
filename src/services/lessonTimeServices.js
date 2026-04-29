@@ -137,28 +137,44 @@ class lessonTimeServices {
   }
 
   static async delete(id) {
-    console.log("SERVICE delete lesson:", id);
+    try {
+      const lesson = await LessonTime.findByPk(id);
 
-    const lesson = await LessonTime.findByPk(id);
+      if (!lesson) {
+        throw new Error("Data tidak di temukan");
+      }
 
-    console.log("CHECK lesson:", !!lesson);
-    if (!lesson) {
-      throw new Error("Data tidak di temukan");
+      const scheduleUsed = await db.Schedule.findOne({
+        where: { lesson_time_id: id },
+      });
+
+      if (scheduleUsed) {
+        throw new Error(
+          "Jam pelajaran tidak bisa di hapus karena sudah di gunakan di jadwal",
+        );
+      }
+      const deleteOrder = lesson.order;
+
+      await lesson.destroy();
+
+      const after = await LessonTime.findAll({
+        where: { order: { [Op.gt]: deleteOrder } },
+      });
+
+      for (const time of after) {
+        await time.update({ order: time.order - 1 });
+      }
+      return true;
+    } catch (err) {
+      // 🔥 HANDLE ERROR DB
+      if (err.original?.code === "ER_ROW_IS_REFERENCED_2") {
+        throw new Error(
+          "Jam pelajaran tidak bisa dihapus karena masih digunakan",
+        );
+      }
+
+      throw err;
     }
-
-    const deleteOrder = lesson.order;
-    await lesson.destroy();
-    console.log("LESSON DELETED");
-
-    const after = await LessonTime.findAll({
-      where: { order: { [Op.gt]: deleteOrder } },
-    });
-
-    for (const time of after) {
-      await time.update({ order: time.order - 1 });
-    }
-
-    console.log("REORDER DONE:", after.length);
   }
 }
 export default lessonTimeServices;

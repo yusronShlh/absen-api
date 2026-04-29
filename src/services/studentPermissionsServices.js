@@ -11,6 +11,12 @@ const {
   PermissionType,
 } = db;
 
+const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
+function buildStudentFileUrl(file) {
+  if (!file) return null;
+  return `${BASE_URL}/uploads/student-permissions/${file}`;
+}
+
 class StudentPermissionService {
   static async getAll() {
     console.log("[SERVICE] getAll permissions");
@@ -28,7 +34,14 @@ class StudentPermissionService {
       order: [["createdAt", "DESC"]],
     });
     console.log(`[SERVICE] Found ${data.length} permissions`);
-    return data;
+
+    const result = data.map((item) => {
+      const obj = item.toJSON();
+      obj.letter = buildStudentFileUrl(obj.letter);
+      return obj;
+    });
+
+    return result;
   }
 
   static async getById(id) {
@@ -50,7 +63,11 @@ class StudentPermissionService {
       console.log("[SERVICE] Permission not found");
       throw new Error("Izin tidak di temukan");
     }
-    return data;
+
+    const result = data.toJSON();
+    result.letter = buildStudentFileUrl(result.letter);
+
+    return result;
   }
 
   static async approve(id, adminId) {

@@ -67,7 +67,7 @@ class TeacherRecapService {
 
     const students = await Student.findAll({
       where: { class_id },
-      include: [{ model: User, attributes: ["name"] }],
+      include: [{ model: User, attributes: ["name"], required: true }],
     });
     console.log("[DETAIL] Total students:", students.length);
 

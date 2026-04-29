@@ -29,7 +29,8 @@ class AdminAttendanceServices {
 
     const students = await Student.findAll({
       where: { class_id: schedule.class_id },
-      include: [{ model: User, attributes: ["id", "name"] }],
+      attributes: ["id"],
+      include: [{ model: User, attributes: ["id", "name"], required: true }],
     });
 
     const session = await AttendanceSession.findOne({
@@ -208,35 +209,12 @@ class AdminAttendanceServices {
   }
 
   static async getClasses({ date }) {
-    const selectedDate = date || getWIBDateString();
-
-    const day = new Date(selectedDate)
-      .toLocaleDateString("id-ID", { weekday: "long" })
-      .toLowerCase();
-
-    const schedules = await Schedule.findAll({
-      where: { day },
-      include: ["Class"],
+    const classes = await db.Class.findAll({
+      attributes: ["id", "name"],
+      order: [["name", "ASC"]],
     });
 
-    if (schedules.length === 0) {
-      console.log("[ADMIN] No schedules found, fallback to all classes");
-
-      const classes = await db.Class.findAll({
-        attributes: ["id", "name"],
-        order: [["name", "ASC"]],
-      });
-      return classes;
-    }
-
-    const map = new Map();
-
-    schedules.forEach((s) => {
-      if (s.Class) {
-        map.set(s.Class.id, { id: s.Class.id, name: s.Class.name });
-      }
-    });
-    return Array.from(map.values());
+    return classes;
   }
 
   static async getSchedules({ class_id, date }) {

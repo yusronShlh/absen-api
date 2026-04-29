@@ -161,10 +161,21 @@ class ScheduleService {
 
   static async delete(id) {
     console.log("[SERVICE] delete schedule:", id);
+
     const schedule = await Schedule.findByPk(id);
     if (!schedule) {
-      console.log("tidak ada schedule", !!schedule);
       throw new Error("Jadwal tidak di temukan");
+    }
+
+    // 🔥 PREVENT DELETE (lebih clean)
+    const session = await db.AttendanceSession.findOne({
+      where: { schedule_id: id },
+    });
+
+    if (session) {
+      throw new Error(
+        "Jadwal tidak bisa dihapus karena sudah berjalan dan memiliki absensi",
+      );
     }
 
     await schedule.destroy();
