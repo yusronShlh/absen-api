@@ -11,5 +11,6 @@ router.use(roleMiddleware("admin"));
 router.get("/classes", StudentReportController.classSelect);
 router.get("/subjects", StudentReportController.getSubjects);
 router.get("/", StudentReportController.getReport);
+router.get("/export", StudentReportController.exportPdf);
 
 export default router;

@@ -112,6 +112,13 @@ class TeacherReportService {
 
   static async getDetailTeacher(start, end, teacher_id) {
     console.log("\n[MODE] DETAIL TEACHER (SQL GROUP)");
+    const teacher = await User.findByPk(teacher_id, {
+      attributes: ["name"],
+    });
+
+    if (!teacher) {
+      throw new Error("Guru tidak ditemukan");
+    }
 
     const query = `
     SELECT 
@@ -207,7 +214,7 @@ class TeacherReportService {
 
     console.log("=== [SERVICE] DONE SQL REPORT ===");
 
-    return result;
+    return { teacher_name: teacher.name, data: result };
   }
 
   static async getAll() {
@@ -252,6 +259,19 @@ class TeacherReportService {
     console.log("[DEBUG] Total teachers:", teachers.length);
 
     return teachers;
+  }
+
+  static async getReportForExport({ semester_id, teacher_id }) {
+    const raw = await this.getReport({ semester_id, teacher_id });
+
+    if (!teacher_id) {
+      return {
+        teacher_name: null,
+        data: raw.map((item, index) => ({ no: index + 1, ...item })),
+      };
+    }
+
+    return raw;
   }
 }
 
