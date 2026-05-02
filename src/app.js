@@ -25,7 +25,7 @@ import teacherRecapRoutes from "./routes/teacher/teacherRecapRoutes.js";
 import path from "path";
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: ["https://admin.auroranova.my.id"] }));
 app.use(express.json());
 
 app.use("/uploads", express.static(path.join("uploads")));
