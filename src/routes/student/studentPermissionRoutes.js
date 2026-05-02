@@ -16,5 +16,6 @@ router.post(
 );
 router.get("/", StudentPermissionController.getHistory);
 router.get("/permission-types", StudentPermissionController.getTypes);
+router.get("/export/:id", StudentPermissionController.exportPdf);
 
 export default router;
