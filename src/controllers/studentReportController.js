@@ -96,7 +96,7 @@ class StudentReportController {
       if (!subject_id) {
         const { subjects, data } = result;
 
-        doc.fontSize(12).text(`Nama kelas: ${class_id}`, 40, y);
+        doc.fontSize(12).text(`Nama kelas: ${result.class_name}`, 40, y);
         y += 20;
 
         const headers = ["Nama", ...subjects];
@@ -123,7 +123,7 @@ class StudentReportController {
       } else {
         const { subject, data } = result;
 
-        doc.fontSize(12).text(`Nama kelas: ${class_id}`, 40, y);
+        doc.fontSize(12).text(`Nama kelas: ${result.class_name}`, 40, y);
         y += 15;
         doc.text(`Mata Pelajaran: ${subject}`, 40, y);
         y += 20;

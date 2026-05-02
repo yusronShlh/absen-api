@@ -14,7 +14,7 @@ const {
 const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
 function buildStudentFileUrl(file) {
   if (!file) return null;
-  return `${BASE_URL}/uploads/student-permissions/${file}`;
+  return `${BASE_URL}/${file}`;
 }
 
 class StudentPermissionService {
@@ -37,7 +37,7 @@ class StudentPermissionService {
 
     const result = data.map((item) => {
       const obj = item.toJSON();
-      obj.letter = buildStudentFileUrl(obj.letter);
+      obj.letter = buildStudentFileUrl(obj.proof_file);
       return obj;
     });
 
@@ -65,7 +65,7 @@ class StudentPermissionService {
     }
 
     const result = data.toJSON();
-    result.letter = buildStudentFileUrl(result.letter);
+    result.letter = buildStudentFileUrl(result.proof_file);
 
     return result;
   }

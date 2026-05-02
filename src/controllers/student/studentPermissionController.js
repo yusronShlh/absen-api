@@ -1,5 +1,8 @@
 import StudentPermissionService from "../../services/student/studentPermissionService.js";
 import db from "../../models/index.js";
+import PDFDocument from "pdfkit";
+import path from "path";
+import fs from "fs";
 
 const { Student } = db;
 
@@ -68,6 +71,92 @@ class StudentPermissionController {
         data,
       });
     } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+
+  static async exportPdf(req, res) {
+    try {
+      const { id } = req.params;
+
+      const data = await StudentPermissionService.getById(id, req.user.id);
+
+      const doc = new PDFDocument({ margin: 50 });
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=surat-izin-${id}.pdf`,
+      );
+
+      doc.pipe(res);
+
+      // =========================
+      // TITLE
+      // =========================
+      doc.fontSize(16).text("SURAT IZIN SISWA", { align: "center" });
+      doc.moveDown();
+
+      doc.fontSize(12).text("Assalamualaikum wr. wb");
+      doc.moveDown();
+
+      // =========================
+      // TUJUAN
+      // =========================
+      doc.text("Kepada Yth.");
+      doc.text("Kepala Sekolah MA Sumber Payung");
+      doc.text("Muhaimin Bahlil S.Ag");
+      doc.moveDown();
+
+      // =========================
+      // ISI
+      // =========================
+      doc.text("Dengan hormat,");
+      doc.moveDown();
+
+      doc.text(
+        `Melalui surat ini, saya ${data.student_name} dari kelas ${data.class_name}, ingin mengajukan izin:`,
+      );
+
+      doc.moveDown();
+
+      doc.text(`Tanggal : ${data.start_date} - ${data.end_date}`);
+      doc.text(`Keterangan : ${data.type}`);
+      doc.moveDown();
+
+      doc.text(`Karena alasan ${data.reason}.`);
+      doc.moveDown();
+
+      // =========================
+      // LAMPIRAN GAMBAR (opsional)
+      // =========================
+      if (data.proof_file && fs.existsSync(data.proof_file)) {
+        doc.text("Bukti pendukung:");
+        doc.moveDown(0.5);
+
+        doc.image(data.proof_file, {
+          fit: [300, 300],
+          align: "left",
+        });
+
+        doc.moveDown();
+      }
+
+      doc.text("Bersamaan dengan ini saya lampirkan bukti pendukung izin.");
+
+      doc.moveDown(2);
+
+      // =========================
+      // PENUTUP
+      // =========================
+      doc.text("Hormat saya,");
+      doc.moveDown(3);
+
+      doc.text(data.student_name);
+
+      doc.end();
+    } catch (err) {
+      console.error("[ERROR EXPORT PDF STUDENT]", err.message);
       res.status(500).json({ message: err.message });
     }
   }

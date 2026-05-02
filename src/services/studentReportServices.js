@@ -16,11 +16,22 @@ class StudentReportService {
     console.log("\n=== [SERVICE] STUDENT REPORT START ===");
     console.log("[SERVICE] Input:", { class_id, subject_id });
 
-    if (!subject_id) {
-      return await this.getReportByClass(class_id);
-    } else {
-      return await this.getReportBySubject(class_id, subject_id);
+    const classData = await Class.findByPk(class_id, { attributes: ["name"] });
+
+    if (!classData) {
+      throw new Error("Kelas tidak ditemukan");
     }
+    const class_name = classData.name;
+
+    let result;
+
+    if (!subject_id) {
+      result = await this.getReportByClass(class_id);
+    } else {
+      result = await this.getReportBySubject(class_id, subject_id);
+    }
+
+    return { class_name, ...result };
   }
 
   // =========================================

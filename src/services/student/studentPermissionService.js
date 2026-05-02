@@ -102,6 +102,55 @@ class StudentPermissionService {
     });
     return result;
   }
+
+  static async getById(permission_id, userId) {
+    console.log("\n=== [SERVICE] GET PERMISSION DETAIL ===");
+
+    const student = await Student.findOne({
+      where: { user_id: userId },
+      include: [
+        {
+          model: db.User,
+          attributes: ["name"],
+        },
+        {
+          model: db.Class,
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    if (!student) {
+      throw new Error("Student tidak ditemukan");
+    }
+
+    const permission = await StudentPermission.findOne({
+      where: {
+        id: permission_id,
+        student_id: student.id,
+      },
+      include: [
+        {
+          model: PermissionType,
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    if (!permission) {
+      throw new Error("Data izin tidak ditemukan");
+    }
+
+    return {
+      student_name: student.User.name,
+      class_name: student.Class.name,
+      start_date: permission.start_date,
+      end_date: permission.end_date,
+      reason: permission.reason,
+      type: permission.PermissionType.name,
+      proof_file: permission.proof_file,
+    };
+  }
 }
 
 export default StudentPermissionService;
