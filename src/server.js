@@ -3,6 +3,13 @@ import db from "./models/index.js";
 import dotenv from "dotenv";
 
 dotenv.config();
+process.on("uncaughtException", (err) => {
+  console.error("💥 UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("💥 UNHANDLED REJECTION:", err);
+});
 
 const PORT = process.env.PORT || 4000;
 
@@ -13,6 +20,21 @@ async function start() {
 
     await db.sequelize.sync();
     console.log("Database synced");
+
+    // async function seedPermissionTypes() {
+    //   const { PermissionType } = db;
+
+    //   const types = ["izin", "sakit"];
+
+    //   for (const name of types) {
+    //     await PermissionType.findOrCreate({
+    //       where: { name },
+    //     });
+    //   }
+
+    //   console.log("✅ Permission types seeded");
+    // }
+    // await seedPermissionTypes();
 
     app.listen(process.env.PORT, "0.0.0.0", () => {
       console.log(

@@ -8,7 +8,16 @@ class TeacherPermissionControllers {
       const teacher_id = req.user.id;
       console.log("👨‍🏫 Teacher ID:", teacher_id);
 
-      const { start_date, end_date, reason, is_full_day, schedules } = req.body;
+      const { start_date, end_date, reason } = req.body;
+
+      const is_full_day = req.body.is_full_day === "true"; // convert ke boolean
+
+      let schedules = req.body.schedules;
+
+      // handle kalau form-data kirim array sebagai string
+      if (typeof schedules === "string") {
+        schedules = [schedules];
+      }
       console.log("📌 Request body:", req.body);
 
       let fileName = null;
