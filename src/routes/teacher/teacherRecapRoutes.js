@@ -11,5 +11,6 @@ router.use(roleMiddleware("guru"));
 router.get("/semester", TeacherRecapController.getSemesters);
 router.get("/", TeacherRecapController.getList);
 router.get("/detail", TeacherRecapController.getDetail);
+router.get("/export-pdf", TeacherRecapController.exportPDF);
 
 export default router;
