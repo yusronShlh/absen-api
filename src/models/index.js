@@ -3,12 +3,14 @@ import AttendanceDetail from "./attendanceDetailModel.js";
 import AttendanceSession from "./attendanceSessionsModel.js";
 import Class from "./classModel.js";
 import LessonTime from "./lessonTimeModel.js";
+import Notification from "./notificationModel.js";
 import PermissionType from "./permissionTypeModel.js";
 import Schedule from "./scheduleModel.js";
 import Semester from "./semesterModel.js";
 import Student from "./studentModel.js";
 import StudentPermission from "./studentPermissionModel.js";
 import Subject from "./subjectModel.js";
+import TeacherNotificationLog from "./teacherNotificationLogModel.js";
 import TeacherPermissionDetail from "./teacherPermissionDetailModel.js";
 import TeacherPermission from "./teacherPermissionsModel.js";
 import User from "./userModel.js";
@@ -28,6 +30,8 @@ db.AttendanceSession = AttendanceSession;
 db.AttendanceDetail = AttendanceDetail;
 db.PermissionType = PermissionType;
 db.Semester = Semester;
+db.Notification = Notification;
+db.TeacherNotificationLog = TeacherNotificationLog;
 
 // relations
 // User -student
@@ -122,5 +126,9 @@ StudentPermission.belongsTo(PermissionType, {
   foreignKey: "permission_type_id",
 });
 PermissionType.hasMany(StudentPermission, { foreignKey: "permission_type_id" });
+
+// NOTIFIKASI RELASI
+Notification.belongsTo(User, { foreignKey: "user_id" });
+User.hasMany(Notification, { foreignKey: "user_id" });
 
 export default db;

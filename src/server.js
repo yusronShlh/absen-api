@@ -1,6 +1,7 @@
 import app from "./app.js";
 import db from "./models/index.js";
 import dotenv from "dotenv";
+import NotificationService from "./services/notificationServices.js";
 
 dotenv.config();
 process.on("uncaughtException", (err) => {
@@ -10,6 +11,10 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   console.error("💥 UNHANDLED REJECTION:", err);
 });
+
+// setInterval(async () => {
+//   await NotificationService.generateTeacherNotifications();
+// }, 6000);
 
 const PORT = process.env.PORT || 4000;
 

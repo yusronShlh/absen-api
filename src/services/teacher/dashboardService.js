@@ -8,6 +8,7 @@ const {
   LessonTime,
   AttendanceSession,
   TeacherPermission,
+  User,
 } = db;
 
 class DashboardService {
@@ -112,13 +113,14 @@ class DashboardService {
   }
 
   static async getDashboard(teacherId) {
+    const teacher = await User.findByPk(teacherId, { attributes: ["name"] });
     const today_schedules = await this.getTodaySchedules(teacherId);
 
     const attendance_stats = await this.getAttendanceStats(teacherId);
 
     const last_leaves = await this.getLastLeaves(teacherId);
 
-    return { today_schedules, attendance_stats, last_leaves };
+    return { teacher, today_schedules, attendance_stats, last_leaves };
   }
 }
 

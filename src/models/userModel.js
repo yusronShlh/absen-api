@@ -14,6 +14,7 @@ const User = sequelize.define(
     nisn: { type: DataTypes.STRING, allowNull: true, unique: true },
     // khusus guru
     nip: { type: DataTypes.STRING, allowNull: true, unique: true },
+    fcm_token: { type: DataTypes.TEXT, allowNull: true },
   },
   {
     tableName: "users",

@@ -23,9 +23,11 @@ import StudentDashboardRoutes from "./routes/student/studentDashboardRoutes.js";
 import StudentRecapRoutes from "./routes/student/studentRecapRoutes.js";
 import teacherRecapRoutes from "./routes/teacher/teacherRecapRoutes.js";
 import path from "path";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import fcmRoutes from "./routes/fcmRoutes.js";
 
 const app = express();
-app.use(cors({ origin: ["https://admin.auroranova.my.id"] }));
+app.use(cors());
 app.use(express.json());
 
 app.use("/uploads", express.static(path.join("uploads")));
@@ -56,6 +58,10 @@ app.use("/api/student/dashboard", StudentDashboardRoutes);
 app.use("/api/student/recap", StudentRecapRoutes);
 
 app.use(express.static("public"));
+
+// notifikasi
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/fcm", fcmRoutes);
 
 app.get("/ping", (req, res) => {
   res.json({ message: "Absensi API running" });

@@ -6,6 +6,7 @@ import {
   getWIBDayName,
   getWIBTimeString,
 } from "../../utils/timeHelper.js";
+import NotificationService from "../notificationServices.js";
 
 const {
   Schedule,
@@ -189,6 +190,19 @@ class AttendaceService {
     }
 
     await AttendanceDetail.bulkCreate(details);
+
+    const scheduleDetail = await Schedule.findByPk(schedule_id, {
+      include: [
+        { model: Class, attributes: ["name"] },
+        { model: Subject, attributes: ["name"] },
+      ],
+    });
+
+    await NotificationService.notifyStudentsAfterAttendance({
+      class_id: schedule.class_id,
+      subject_name: scheduleDetail.Subject.name,
+      class_name: scheduleDetail.Class.name,
+    });
 
     return session;
   }
