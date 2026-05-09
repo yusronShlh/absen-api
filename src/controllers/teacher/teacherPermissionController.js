@@ -10,7 +10,8 @@ class TeacherPermissionControllers {
 
       const { start_date, end_date, reason } = req.body;
 
-      const is_full_day = req.body.is_full_day === "true"; // convert ke boolean
+      const is_full_day =
+        req.body.is_full_day === true || req.body.is_full_day === "true";
 
       let schedules = req.body.schedules;
 

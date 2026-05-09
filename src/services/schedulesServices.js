@@ -2,50 +2,75 @@ import db from "../models/index.js";
 import { Op } from "sequelize";
 // import lessonTime from "../models/lessonTimeModel.js";
 
-const { Schedule, Class, Subject, LessonTime, User } = db;
+const { Schedule, TeachingAssignment, Class, Subject, LessonTime, User } = db;
 
 class ScheduleService {
   // =========
   // CREATE
   // =========
   static async create(data) {
-    console.log("[SERVICE] create schedule:", data);
-    const { day, class_id, subject_id, teacher_id, lesson_time_id } = data;
+    console.log("\n📸 [SERVICE] CREATE SCHEDULE");
+    console.log("BODY:", data);
 
-    if (!day || !class_id || !subject_id || !teacher_id || !lesson_time_id) {
+    const { day, teaching_assignment_id, lesson_time_id } = data;
+
+    if (!day || !teaching_assignment_id || !lesson_time_id) {
       throw new Error("Semua field wajib di isi");
     }
 
-    // =========================
-    // VALIDASI MASTER DATA
-    // =========================
+    // VALIDASI ASSIGNMENT
+    const assignment = await TeachingAssignment.findByPk(
+      teaching_assignment_id,
+      {
+        include: [
+          { model: Class },
+          { model: Subject },
+          { model: User, as: "teacher" },
+        ],
+      },
+    );
 
-    const kelas = await Class.findByPk(class_id);
-    if (!kelas) throw new Error("Kelas tidak valid");
+    if (!assignment) {
+      throw new Error("Teaching assignment tidak valid");
+    }
 
-    const subject = await Subject.findByPk(subject_id);
-    if (!subject) throw new Error("Mapel tidak valid");
+    console.log("✅ Assignment ditemukan:", assignment.id);
 
-    const teacher = await User.findOne({
-      where: { id: teacher_id, role: "guru" },
-    });
-    if (!teacher) throw new Error("Guru tidak valid");
-
+    // VALIDASI LESSON TIME
     const lessonTime = await LessonTime.findByPk(lesson_time_id);
-    if (!lessonTime) throw new Error("Jam pelajaran tidak valid");
 
-    // bentrok kelas
+    if (!lessonTime) {
+      throw new Error("Jam pelajaran tidak valid");
+    }
+
+    // CEK BENTROK KELAS
     const classConflict = await Schedule.findOne({
-      where: { day, class_id, lesson_time_id },
+      where: { day, lesson_time_id },
+      include: [
+        {
+          model: TeachingAssignment,
+          where: {
+            class_id: assignment.class_id,
+          },
+        },
+      ],
     });
 
     if (classConflict) {
       throw new Error("Kelas sudah punya jadwal di jam ini");
     }
 
-    // bentrok guru
+    // CEK BENTROK GURU
     const teacherConflict = await Schedule.findOne({
-      where: { day, teacher_id, lesson_time_id },
+      where: { day, lesson_time_id },
+      include: [
+        {
+          model: TeachingAssignment,
+          where: {
+            teacher_id: assignment.teacher_id,
+          },
+        },
+      ],
     });
 
     if (teacherConflict) {
@@ -54,11 +79,11 @@ class ScheduleService {
 
     const schedule = await Schedule.create({
       day,
-      class_id,
-      subject_id,
-      teacher_id,
+      teaching_assignment_id,
       lesson_time_id,
     });
+
+    console.log("✅ Schedule created:", schedule.id);
 
     return schedule;
   }
@@ -69,16 +94,22 @@ class ScheduleService {
     const finalClassId = class_id || classId;
     const where = {};
 
-    if (finalClassId) where.class_id = finalClassId;
+    // if (finalClassId) where.class_id = finalClassId;
     if (day) where.day = day;
 
     const schedules = await Schedule.findAll({
       where,
       include: [
-        { model: Class },
-        { model: Subject },
+        {
+          model: TeachingAssignment,
+          where: finalClassId ? { class_id: finalClassId } : undefined,
+          include: [
+            { model: Class },
+            { model: Subject },
+            { model: User, as: "teacher", attributes: ["id", "name"] },
+          ],
+        },
         { model: LessonTime },
-        { model: User, as: "teacher", attributes: ["id", "name"] },
       ],
       order: [["lesson_time_id", "ASC"]],
     });
@@ -87,71 +118,106 @@ class ScheduleService {
   }
 
   static async update(id, data) {
-    console.log("[SERVICE] update schedule:", id, data);
+    console.log("\n📸 [SERVICE] UPDATE SCHEDULE");
+    console.log("ID:", id);
+    console.log("BODY:", data);
+
     const schedule = await Schedule.findByPk(id);
 
     if (!schedule) {
-      console.log("tidak ada schedule", !!schedule);
       throw new Error("Jadwal tidak di temukan");
     }
 
-    const { day, class_id, subject_id, teacher_id, lesson_time_id } = data;
+    const { day, teaching_assignment_id, lesson_time_id } = data;
 
-    // =========================
-    // VALIDASI MASTER (OPTIONAL UPDATE)
-    // =========================
+    let assignment = null;
 
-    if (class_id) {
-      const kelas = await Class.findByPk(class_id);
-      if (!kelas) throw new Error("Kelas tidak valid");
-    }
-
-    if (subject_id) {
-      const subject = await Subject.findByPk(subject_id);
-      if (!subject) throw new Error("Mapel tidak valid");
-    }
-
-    if (teacher_id) {
-      const teacher = await User.findOne({
-        where: { id: teacher_id, role: "guru" },
+    if (teaching_assignment_id) {
+      assignment = await TeachingAssignment.findByPk(teaching_assignment_id, {
+        include: [
+          { model: Class },
+          { model: Subject },
+          { model: User, as: "teacher" },
+        ],
       });
-      if (!teacher) throw new Error("Guru tidak valid");
+
+      if (!assignment) {
+        throw new Error("Teaching assignment tidak valid");
+      }
+
+      console.log("✅ Assignment ditemukan:", assignment.id);
+    } else {
+      assignment = await TeachingAssignment.findByPk(
+        schedule.teaching_assignment_id,
+        {
+          include: [
+            { model: Class },
+            { model: Subject },
+            { model: User, as: "teacher" },
+          ],
+        },
+      );
     }
 
     if (lesson_time_id) {
       const lessonTime = await LessonTime.findByPk(lesson_time_id);
-      if (!lessonTime) throw new Error("Jam pelajaran tidak valid");
-    }
 
-    // =========================
-    // CEK BENTROK UPDATE
-    // =========================
-
-    if (day || class_id || teacher_id || lesson_time_id) {
-      // cek bentrok kelas
-      const classConflict = await Schedule.findOne({
-        where: {
-          id: { [Op.ne]: id },
-          day: day || schedule.day,
-          lesson_time_id: lesson_time_id || schedule.lesson_time_id,
-          class_id: class_id || schedule.class_id,
-        },
-      });
-
-      if (classConflict) {
-        throw new Error("Kelas sudah punya jadwal di jam ini");
+      if (!lessonTime) {
+        throw new Error("Jam pelajaran tidak valid");
       }
     }
 
-    // =========================
-    // UPDATE
-    // =========================
+    const finalDay = day || schedule.day;
+
+    const finalLessonTimeId = lesson_time_id || schedule.lesson_time_id;
+
+    const finalTeachingAssignmentId =
+      teaching_assignment_id || schedule.teaching_assignment_id;
+
+    const classConflict = await Schedule.findOne({
+      where: {
+        id: { [Op.ne]: id },
+        day: finalDay,
+        lesson_time_id: finalLessonTimeId,
+      },
+      include: [
+        {
+          model: TeachingAssignment,
+          where: {
+            class_id: assignment.class_id,
+          },
+        },
+      ],
+    });
+
+    if (classConflict) {
+      throw new Error("Kelas sudah punya jadwal di jam ini");
+    }
+
+    const teacherConflict = await Schedule.findOne({
+      where: {
+        id: { [Op.ne]: id },
+        day: finalDay,
+        lesson_time_id: finalLessonTimeId,
+      },
+      include: [
+        {
+          model: TeachingAssignment,
+          where: {
+            teacher_id: assignment.teacher_id,
+          },
+        },
+      ],
+    });
+
+    if (teacherConflict) {
+      throw new Error("Guru sudah mengajar di jam ini");
+    }
+
     await schedule.update({
-      day: day ?? schedule.day,
-      class_id: class_id ?? schedule.class_id,
-      subject_id: subject_id ?? schedule.subject_id,
-      teacher_id: teacher_id ?? schedule.teacher_id,
-      lesson_time_id: lesson_time_id ?? schedule.lesson_time_id,
+      day: finalDay,
+      teaching_assignment_id: finalTeachingAssignmentId,
+      lesson_time_id: finalLessonTimeId,
     });
 
     console.log("✅ Schedule updated:", schedule.id);
@@ -230,11 +296,20 @@ class ScheduleService {
 
     console.log("✅ LessonTime formatted:", formattedTimes[0] || "No data");
 
+    const assignments = await TeachingAssignment.findAll({
+      include: [
+        { model: Class, attributes: ["id", "name"] },
+        { model: Subject, attributes: ["id", "name"] },
+        { model: User, as: "teacher", attributes: ["id", "name"] },
+      ],
+      order: [["id", "ASC"]],
+    });
+
+    console.log(`🔍 Assignments fetched: ${assignments.length}`);
+
     return {
       days,
-      classes,
-      subjects,
-      teachers,
+      teachingAssignments: assignments,
       lessonTimes: formattedTimes,
     };
   }

@@ -8,6 +8,8 @@ const {
   Class,
   Subject,
   LessonTime,
+  TeachingAssignment,
+  User,
 } = db;
 
 class TeacherPermissionService {
@@ -39,7 +41,25 @@ class TeacherPermissionService {
     }
 
     const overlap = await TeacherPermission.findOne({
-      where: { teacher_id, status: { [Op.in]: ["pending", "approved"] } },
+      where: {
+        teacher_id,
+        status: {
+          [Op.in]: ["pending", "approved"],
+        },
+
+        [Op.or]: [
+          {
+            start_date: {
+              [Op.between]: [start_date, end_date],
+            },
+          },
+          {
+            end_date: {
+              [Op.between]: [start_date, end_date],
+            },
+          },
+        ],
+      },
     });
 
     if (overlap) {
@@ -65,7 +85,14 @@ class TeacherPermissionService {
       console.log("📚 Partial schedules:", finalSchedules);
 
       const validSchedules = await Schedule.findAll({
-        where: { teacher_id, id: finalSchedules },
+        where: { id: finalSchedules },
+        include: [
+          {
+            model: db.TeachingAssignment,
+            where: { teacher_id },
+            required: true,
+          },
+        ],
       });
 
       if (validSchedules.length !== finalSchedules.length) {
@@ -106,15 +133,37 @@ class TeacherPermissionService {
     console.log("📅 Hari:", dayName);
 
     const schedules = await Schedule.findAll({
-      where: { teacher_id: teacherId, day: dayName },
+      where: {
+        day: dayName,
+      },
+
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
+        {
+          model: db.TeachingAssignment,
+          where: {
+            teacher_id: teacherId,
+          },
+
+          include: [
+            {
+              model: db.Class,
+              attributes: ["id", "name"],
+            },
+            {
+              model: db.Subject,
+              attributes: ["id", "name"],
+            },
+          ],
+
+          required: true,
+        },
+
         {
           model: LessonTime,
           attributes: ["id", "start_time", "end_time", "order"],
         },
       ],
+
       order: [[LessonTime, "order", "ASC"]],
     });
     console.log(`✅ Found schedules: ${schedules.length}`);

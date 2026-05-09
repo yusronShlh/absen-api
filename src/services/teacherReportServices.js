@@ -9,6 +9,7 @@ const {
   User,
   AttendanceSession,
   TeacherPermission,
+  TeachingAssignment,
   sequelize,
 } = db;
 
@@ -43,7 +44,15 @@ class TeacherReportService {
 
     console.log("[DEBUG] Total teachers:", teachers.length);
 
-    const schedules = await Schedule.findAll();
+    const schedules = await Schedule.findAll({
+      include: [
+        {
+          model: db.TeachingAssignment,
+          attributes: ["teacher_id"],
+          required: true,
+        },
+      ],
+    });
     const sessions = await AttendanceSession.findAll({
       where: { date: { [Op.between]: [start, end] } },
     });
@@ -66,7 +75,7 @@ class TeacherReportService {
       let alpha = 0;
 
       const teacherSchedules = schedules.filter(
-        (s) => s.teacher_id === teacher.id,
+        (s) => s.TeachingAssignment.teacher_id === teacher.id,
       );
 
       teacherSchedules.forEach((schedule) => {
@@ -121,52 +130,59 @@ class TeacherReportService {
     }
 
     const query = `
-    SELECT 
-      CONCAT(sub.name, ' (', c.name, ')') AS subject,
-      
-      COUNT(ses.id) AS total_pertemuan,
+SELECT 
+  CONCAT(sub.name, ' (', c.name, ')') AS subject,
 
-      SUM(
-        CASE 
-          WHEN tp.id IS NOT NULL THEN 0
-          WHEN ses.is_teacher_present = 1 THEN 1
-          ELSE 0
-        END
-      ) AS hadir,
+  COUNT(ses.id) AS total_pertemuan,
 
-      SUM(
-        CASE 
-          WHEN tp.id IS NOT NULL THEN 1
-          ELSE 0
-        END
-      ) AS izin,
+  SUM(
+    CASE
+      WHEN tp.id IS NOT NULL THEN 0
+      WHEN ses.is_teacher_present = 1 THEN 1
+      ELSE 0
+    END
+  ) AS hadir,
 
-      SUM(
-        CASE 
-          WHEN tp.id IS NULL AND ses.is_teacher_present = 0 THEN 1
-          ELSE 0
-        END
-      ) AS alpha
+  SUM(
+    CASE
+      WHEN tp.id IS NOT NULL THEN 1
+      ELSE 0
+    END
+  ) AS izin,
 
-    FROM schedules sc
+  SUM(
+    CASE
+      WHEN tp.id IS NULL AND ses.is_teacher_present = 0 THEN 1
+      ELSE 0
+    END
+  ) AS alpha
 
-    LEFT JOIN subjects sub ON sc.subject_id = sub.id
-    LEFT JOIN classes c ON sc.class_id = c.id
-    LEFT JOIN attendance_sessions ses 
-      ON ses.schedule_id = sc.id 
-      AND ses.date BETWEEN :start AND :end
+FROM schedules sc
 
-    LEFT JOIN teacher_permissions tp
-      ON tp.teacher_id = sc.teacher_id
-      AND tp.status = 'approved'
-      AND ses.date BETWEEN tp.start_date AND tp.end_date
+JOIN teaching_assignments ta
+  ON sc.teaching_assignment_id = ta.id
 
-    WHERE sc.teacher_id = :teacher_id
+LEFT JOIN subjects sub
+  ON ta.subject_id = sub.id
 
-    GROUP BY sc.subject_id, sc.class_id
+LEFT JOIN classes c
+  ON ta.class_id = c.id
 
-    ORDER BY sub.name ASC, c.name ASC
-  `;
+LEFT JOIN attendance_sessions ses
+  ON ses.schedule_id = sc.id
+  AND ses.date BETWEEN :start AND :end
+
+LEFT JOIN teacher_permissions tp
+  ON tp.teacher_id = ta.teacher_id
+  AND tp.status = 'approved'
+  AND ses.date BETWEEN tp.start_date AND tp.end_date
+
+WHERE ta.teacher_id = :teacher_id
+
+GROUP BY ta.subject_id, ta.class_id
+
+ORDER BY sub.name ASC, c.name ASC
+`;
 
     console.log("[DEBUG] Executing SQL...");
 
@@ -245,12 +261,23 @@ class TeacherReportService {
     console.log("[DEBUG] Range:", start_date, "→", end_date);
 
     const teachers = await sequelize.query(
-      `SELECT DISTINCT u.id, u.name
-      FROM attendance_sessions s
-      JOIN schedules sc ON s.schedule_id = sc.id
-      JOIN users u ON sc.teacher_id = u.id
-      WHERE s.date BETWEEN :start_date AND :end_date
-      ORDER BY u.name ASC`,
+      `
+  SELECT DISTINCT u.id, u.name
+  FROM attendance_sessions s
+
+  JOIN schedules sc
+    ON s.schedule_id = sc.id
+
+  JOIN teaching_assignments ta
+    ON sc.teaching_assignment_id = ta.id
+
+  JOIN users u
+    ON ta.teacher_id = u.id
+
+  WHERE s.date BETWEEN :start_date AND :end_date
+
+  ORDER BY u.name ASC
+`,
       {
         replacements: { start_date, end_date },
         type: sequelize.QueryTypes.SELECT,

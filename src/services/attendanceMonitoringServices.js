@@ -11,6 +11,7 @@ const {
   AttendanceSession,
   AttendanceDetail,
   TeacherPermission,
+  TeachingAssignment,
 } = db;
 
 class MonitoringService {
@@ -34,16 +35,39 @@ class MonitoringService {
     console.log("[SERVICE] Converted Day:", day);
 
     const schedules = await Schedule.findAll({
-      where: { day, ...(class_id && { class_id }) },
+      where: { day },
+
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
+        {
+          model: TeachingAssignment,
+
+          where: class_id ? { class_id } : undefined,
+
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "name"],
+            },
+
+            {
+              model: Subject,
+              attributes: ["id", "name"],
+            },
+
+            {
+              model: User,
+              as: "teacher",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+
         {
           model: LessonTime,
           attributes: ["id", "order", "name", "start_time", "end_time"],
         },
-        { model: User, as: "teacher", attributes: ["id", "name"] },
       ],
+
       order: [[LessonTime, "order", "ASC"]],
     });
 
@@ -76,7 +100,9 @@ class MonitoringService {
     const result = schedules.map((s) => {
       const session = sessions.find((sess) => sess.schedule_id === s.id);
 
-      const permission = permissions.find((p) => p.teacher_id === s.teacher_id);
+      const permission = permissions.find(
+        (p) => p.teacher_id === s.TeachingAssignment.teacher_id,
+      );
 
       const is_submitted = !!session || !!permission;
 
@@ -126,9 +152,18 @@ class MonitoringService {
 
       return {
         id: s.id,
-        class: { id: s.Class.id, name: s.Class.name },
-        subject: { id: s.Subject.id, name: s.Subject.name },
-        teacher: { id: s.teacher.id, name: s.teacher.name },
+        class: {
+          id: s.TeachingAssignment.Class.id,
+          name: s.TeachingAssignment.Class.name,
+        },
+        subject: {
+          id: s.TeachingAssignment.Subject.id,
+          name: s.TeachingAssignment.Subject.name,
+        },
+        teacher: {
+          id: s.TeachingAssignment.teacher.id,
+          name: s.TeachingAssignment.teacher.name,
+        },
         lesson_time: {
           id: s.LessonTime.id,
           order: s.LessonTime.order,
@@ -162,14 +197,20 @@ class MonitoringService {
       total_students: attendances?.length,
     });
 
-    const schedule = await Schedule.findByPk(schedule_id);
+    const schedule = await Schedule.findByPk(schedule_id, {
+      include: [
+        {
+          model: TeachingAssignment,
+        },
+      ],
+    });
 
     if (!schedule) {
       throw new Error("Jadwal tidak di temukan");
     }
 
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
+      where: { class_id: schedule.TeachingAssignment.class_id },
       attributes: ["id"],
       include: [{ model: User, required: true }],
     });
@@ -258,13 +299,32 @@ class MonitoringService {
     // 🔍 Ambil schedule + relasi
     const schedule = await Schedule.findByPk(schedule_id, {
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
+        {
+          model: TeachingAssignment,
+
+          include: [
+            {
+              model: Class,
+              attributes: ["id", "name"],
+            },
+
+            {
+              model: Subject,
+              attributes: ["id", "name"],
+            },
+
+            {
+              model: User,
+              as: "teacher",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+
         {
           model: LessonTime,
           attributes: ["id", "name", "start_time", "end_time"],
         },
-        { model: User, as: "teacher", attributes: ["id", "name"] },
       ],
     });
 
@@ -277,7 +337,7 @@ class MonitoringService {
 
     // 👨‍🎓 Ambil semua siswa di kelas
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
+      where: { class_id: schedule.TeachingAssignment.class_id },
       attributes: ["id"],
       include: [
         {
@@ -337,9 +397,9 @@ class MonitoringService {
     return {
       schedule: {
         id: schedule.id,
-        class: schedule.Class,
-        subject: schedule.Subject,
-        teacher: schedule.teacher,
+        class: schedule.TeachingAssignment.Class,
+        subject: schedule.TeachingAssignment.Subject,
+        teacher: schedule.TeachingAssignment.teacher,
         lesson_time: schedule.LessonTime,
       },
       date: selectDate,

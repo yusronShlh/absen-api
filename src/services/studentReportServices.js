@@ -1,6 +1,5 @@
 import { col, fn, literal, Op } from "sequelize";
 import db from "../models/index.js";
-import User from "../models/userModel.js";
 
 const {
   Student,
@@ -9,6 +8,8 @@ const {
   Subject,
   AttendanceSession,
   AttendanceDetail,
+  TeachingAssignment,
+  User,
 } = db;
 
 class StudentReportService {
@@ -41,8 +42,14 @@ class StudentReportService {
     console.log("\n[MODE] CLASS REPORT (GROUPED SUBJECT)");
 
     const schedules = await Schedule.findAll({
-      where: { class_id },
-      include: [{ model: Subject, attributes: ["id", "name"] }],
+      include: [
+        {
+          model: db.TeachingAssignment,
+          where: { class_id },
+          required: true,
+          include: [{ model: db.Subject, attributes: ["id", "name"] }],
+        },
+      ],
     });
 
     console.log("[DEBUG] Total schedules:", schedules.length);
@@ -51,14 +58,18 @@ class StudentReportService {
     const subjectMap = {};
 
     schedules.forEach((s) => {
-      if (!subjectMap[s.subject_id]) {
-        subjectMap[s.subject_id] = {
-          subject_id: s.subject_id,
-          subject_name: s.Subject.name,
+      const subjectId = s.TeachingAssignment.subject_id;
+      const subjectName = s.TeachingAssignment.Subject.name;
+
+      if (!subjectMap[subjectId]) {
+        subjectMap[subjectId] = {
+          subject_id: subjectId,
+          subject_name: subjectName,
           schedule_ids: [],
         };
       }
-      subjectMap[s.subject_id].schedule_ids.push(s.id);
+
+      subjectMap[subjectId].schedule_ids.push(s.id);
     });
 
     const subjects = Object.values(subjectMap);
@@ -142,10 +153,16 @@ class StudentReportService {
     console.log("\n[MODE] SUBJECT REPORT");
 
     const schedules = await Schedule.findAll({
-      where: { class_id, subject_id },
       include: [
-        { model: Subject, attributes: ["name"] },
-        { model: User, as: "teacher", attributes: ["name"] },
+        {
+          model: db.TeachingAssignment,
+          where: { class_id, subject_id },
+          required: true,
+          include: [
+            { model: db.Subject, attributes: ["name"] },
+            { model: db.User, as: "teacher", attributes: ["name"] },
+          ],
+        },
       ],
     });
 
@@ -217,7 +234,7 @@ class StudentReportService {
 
     return {
       subject_id,
-      subject: schedules[0].Subject.name,
+      subject: schedules[0].TeachingAssignment.Subject.name,
       data: result,
     };
   }
@@ -236,8 +253,14 @@ class StudentReportService {
     console.log("[SERVICE] Class ID:", class_id);
 
     const schedules = await Schedule.findAll({
-      where: { class_id },
-      include: [{ model: Subject, attributes: ["id", "name"] }],
+      include: [
+        {
+          model: db.TeachingAssignment,
+          where: { class_id },
+          required: true,
+          include: [{ model: Subject, attributes: ["id", "name"] }],
+        },
+      ],
     });
 
     console.log("[DEBUG] Total schedules:", schedules.length);
@@ -245,10 +268,13 @@ class StudentReportService {
     const map = {};
 
     schedules.forEach((s) => {
-      if (!map[s.subject_id]) {
-        map[s.subject_id] = {
-          subject_id: s.subject_id,
-          subject_name: s.Subject.name,
+      const subjectId = s.TeachingAssignment.subject_id;
+      const subjectName = s.TeachingAssignment.Subject.name;
+
+      if (!map[subjectId]) {
+        map[subjectId] = {
+          subject_id: subjectId,
+          subject_name: subjectName,
         };
       }
     });

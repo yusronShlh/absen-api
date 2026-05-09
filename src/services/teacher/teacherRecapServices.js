@@ -10,6 +10,7 @@ const {
   AttendanceSession,
   AttendanceDetail,
   User,
+  TeachingAssignment,
 } = db;
 
 class TeacherRecapService {
@@ -17,31 +18,50 @@ class TeacherRecapService {
     console.log("\n=== [SERVICE] TEACHER RECAP LIST ===");
 
     const schedules = await Schedule.findAll({
-      where: { teacher_id },
       include: [
-        { model: Subject, attributes: ["id", "name"] },
-        { model: Class, attributes: ["id", "name"] },
+        {
+          model: db.TeachingAssignment,
+
+          where: { teacher_id },
+
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "name"],
+            },
+            {
+              model: Class,
+              attributes: ["id", "name"],
+            },
+          ],
+
+          required: true,
+        },
       ],
+
       raw: true,
     });
+
     console.log("[LIST] Raw schedules:", schedules.length);
 
     const map = new Map();
+
     schedules.forEach((s) => {
-      const key = `${s.subject_id}-${s.class_id}`;
+      const key = `${s["TeachingAssignment.subject_id"]}-${s["TeachingAssignment.class_id"]}`;
 
       if (!map.has(key)) {
         map.set(key, {
-          subject_id: s.subject_id,
-          class_id: s.class_id,
-          subject: s["Subject.name"],
-          class: s["Class.name"],
+          subject_id: s["TeachingAssignment.subject_id"],
+          class_id: s["TeachingAssignment.class_id"],
+
+          subject: s["TeachingAssignment.Subject.name"],
+
+          class: s["TeachingAssignment.Class.name"],
         });
       }
     });
-    const result = Array.from(map.values());
 
-    return result;
+    return Array.from(map.values());
   }
 
   static async getDetail({ teacher_id, subject_id, class_id, semester_id }) {
@@ -52,13 +72,19 @@ class TeacherRecapService {
     }
 
     const schedules = await Schedule.findAll({
-      where: { teacher_id, subject_id, class_id },
+      include: [
+        {
+          model: db.TeachingAssignment,
+          where: { teacher_id, subject_id, class_id },
+          required: true,
+        },
+      ],
     });
 
     if (!schedules.length) {
       throw new Error("Data jadwal tidak ditemukan");
     }
-    console.log("[DETAIL] Total Schedules:", schedules.id);
+    console.log("[DETAIL] Total Schedules:", schedules.length);
 
     const scheduleIds = schedules.map((s) => s.id);
 

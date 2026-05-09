@@ -19,6 +19,7 @@ const {
   AttendanceDetail,
   StudentPermission,
   PermissionType,
+  TeachingAssignment,
 } = db;
 
 class AttendaceService {
@@ -26,12 +27,26 @@ class AttendaceService {
     const today = getWIBDayName();
 
     const schedules = await Schedule.findAll({
-      where: { teacher_id: teacherId, day: today },
+      where: { day: today },
+
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
-        { model: LessonTime, attributes: ["id", "start_time", "end_time"] },
+        {
+          model: TeachingAssignment,
+          where: { teacher_id: teacherId },
+
+          include: [
+            { model: Class, attributes: ["id", "name"] },
+            { model: Subject, attributes: ["id", "name"] },
+            { model: User, as: "teacher", attributes: ["id", "name"] },
+          ],
+        },
+
+        {
+          model: LessonTime,
+          attributes: ["id", "start_time", "end_time"],
+        },
       ],
+
       order: [[LessonTime, "order", "ASC"]],
     });
     return schedules;
@@ -39,11 +54,24 @@ class AttendaceService {
 
   static async getStudentBySchedule(scheduleId, teacherId) {
     const schedule = await Schedule.findOne({
-      where: { id: scheduleId, teacher_id: teacherId },
+      where: { id: scheduleId },
+
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
-        { model: LessonTime, attributes: ["start_time", "end_time"] },
+        {
+          model: TeachingAssignment,
+          where: { teacher_id: teacherId },
+
+          include: [
+            { model: Class, attributes: ["id", "name"] },
+            { model: Subject, attributes: ["id", "name"] },
+            { model: User, as: "teacher", attributes: ["id", "name"] },
+          ],
+        },
+
+        {
+          model: LessonTime,
+          attributes: ["id", "start_time", "end_time"],
+        },
       ],
     });
 
@@ -52,8 +80,18 @@ class AttendaceService {
     }
 
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
-      include: [{ model: User, attributes: ["id", "name"], required: true }],
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+      },
+
+      include: [
+        {
+          model: User,
+          attributes: ["id", "name"],
+          required: true,
+        },
+      ],
+
       attributes: ["id"],
     });
 
@@ -61,12 +99,27 @@ class AttendaceService {
 
     const permissions = await StudentPermission.findAll({
       where: {
-        student_id: { [Op.in]: students.map((s) => s.id) },
+        student_id: {
+          [Op.in]: students.map((s) => s.id),
+        },
+
         status: "approved",
-        start_date: { [Op.lte]: today },
-        end_date: { [Op.gte]: today },
+
+        start_date: {
+          [Op.lte]: today,
+        },
+
+        end_date: {
+          [Op.gte]: today,
+        },
       },
-      include: [{ model: PermissionType, attributes: ["name"] }],
+
+      include: [
+        {
+          model: PermissionType,
+          attributes: ["name"],
+        },
+      ],
     });
 
     const studentWithStatus = students.map((s) => {
@@ -81,10 +134,17 @@ class AttendaceService {
             : "izin";
       }
 
-      return { id: s.id, name: s.User.name, status };
+      return {
+        id: s.id,
+        name: s.User.name,
+        status,
+      };
     });
 
-    return { schedule, students: studentWithStatus };
+    return {
+      schedule,
+      students: studentWithStatus,
+    };
   }
 
   static async submitAttendance(teacherId, body) {
@@ -98,8 +158,17 @@ class AttendaceService {
       : getWIBDateString();
 
     const schedule = await Schedule.findOne({
-      where: { id: schedule_id, teacher_id: teacherId },
-      include: [{ model: LessonTime }],
+      where: { id: schedule_id },
+
+      include: [
+        {
+          model: TeachingAssignment,
+          where: { teacher_id: teacherId },
+        },
+        {
+          model: LessonTime,
+        },
+      ],
     });
 
     if (!schedule) {
@@ -127,7 +196,7 @@ class AttendaceService {
 
     // Validasi siswa
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
+      where: { class_id: schedule.TeachingAssignment.class_id },
       attributes: ["id"],
       include: [{ model: User, required: true }],
     });
@@ -193,15 +262,20 @@ class AttendaceService {
 
     const scheduleDetail = await Schedule.findByPk(schedule_id, {
       include: [
-        { model: Class, attributes: ["name"] },
-        { model: Subject, attributes: ["name"] },
+        {
+          model: TeachingAssignment,
+          include: [
+            { model: Class, attributes: ["name"] },
+            { model: Subject, attributes: ["name"] },
+          ],
+        },
       ],
     });
 
     await NotificationService.notifyStudentsAfterAttendance({
-      class_id: schedule.class_id,
-      subject_name: scheduleDetail.Subject.name,
-      class_name: scheduleDetail.Class.name,
+      class_id: schedule.TeachingAssignment.class_id,
+      subject_name: scheduleDetail.TeachingAssignment.Subject.name,
+      class_name: scheduleDetail.TeachingAssignment.Class.name,
     });
 
     return session;

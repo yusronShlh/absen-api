@@ -9,6 +9,7 @@ const {
   AttendanceSession,
   TeacherPermission,
   User,
+  TeachingAssignment,
 } = db;
 
 class DashboardService {
@@ -30,12 +31,20 @@ class DashboardService {
   static async getTodaySchedules(teacherId) {
     const today = this.getTodayName();
     const schedules = await Schedule.findAll({
-      where: { teacher_id: teacherId, day: today },
+      where: { day: today },
       include: [
-        { model: Class, attributes: ["id", "name"] },
-        { model: Subject, attributes: ["id", "name"] },
-        { model: LessonTime, attributes: ["start_time", "end_time"] },
+        {
+          model: db.TeachingAssignment,
+          where: { teacher_id: teacherId },
+          include: [
+            { model: Class, attributes: ["id", "name"] },
+            { model: Subject, attributes: ["id", "name"] },
+          ],
+          required: true,
+        },
+        { model: LessonTime, attributes: ["start_time", "end_time", "order"] },
       ],
+
       order: [[LessonTime, "order", "ASC"]],
     });
 
@@ -51,7 +60,13 @@ class DashboardService {
       include: [
         {
           model: Schedule,
-          where: { teacher_id: teacherId },
+          include: [
+            {
+              model: db.TeachingAssignment,
+              where: { teacher_id: teacherId },
+              required: true,
+            },
+          ],
         },
       ],
       where: {
@@ -64,7 +79,19 @@ class DashboardService {
 
     // ALPHA
     const alpha = await AttendanceSession.count({
-      include: [{ model: Schedule, where: { teacher_id: teacherId } }],
+      include: [
+        {
+          model: Schedule,
+          include: [
+            {
+              model: db.TeachingAssignment,
+              where: { teacher_id: teacherId },
+              required: true,
+            },
+          ],
+          required: true,
+        },
+      ],
       where: {
         is_teacher_present: false,
         createdAt: { [Op.between]: [startOfMonth, now] },

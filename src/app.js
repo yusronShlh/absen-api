@@ -19,6 +19,7 @@ import adminAttendanceRoutes from "./routes/adminAttendanceRoutes.js";
 import studentReportRoutes from "./routes/studentReportRoutes.js";
 import teacherReportRoutes from "./routes/teacherReportRoutes.js";
 import semesterRoutes from "./routes/semesterRoutes.js";
+import teachingAssignmentRoutes from "./routes/teachingAssignmentRoutes.js";
 import StudentDashboardRoutes from "./routes/student/studentDashboardRoutes.js";
 import StudentRecapRoutes from "./routes/student/studentRecapRoutes.js";
 import teacherRecapRoutes from "./routes/teacher/teacherRecapRoutes.js";
@@ -47,6 +48,7 @@ app.use("/api/admin/admin-attendance", adminAttendanceRoutes);
 app.use("/api/admin/reports/student-attendance", studentReportRoutes);
 app.use("/api/admin/reports/teacher-attendance", teacherReportRoutes);
 app.use("/api/admin/semesters", semesterRoutes);
+app.use("/api/admin/teaching-assignments", teachingAssignmentRoutes);
 
 app.use("/api/teacher", teacherAttendanceRoutes);
 app.use("/api/teacher/dashboard", teacherDashboardRoutes);

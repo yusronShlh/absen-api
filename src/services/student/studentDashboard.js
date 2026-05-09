@@ -13,6 +13,7 @@ const {
   LessonTime,
   AttendanceSession,
   AttendanceDetail,
+  TeachingAssignment,
 } = db;
 
 class StudentDashboardService {
@@ -36,13 +37,35 @@ class StudentDashboardService {
     console.log("[DEBUG] Today:", today, todayDate, currentTime);
 
     const schedules = await Schedule.findAll({
-      where: { class_id, day: today },
+      where: { day: today },
+
       include: [
-        { model: Subject, attributes: ["name"] },
-        { model: LessonTime, attributes: ["start_time", "end_time", "name"] },
-        { model: User, as: "teacher", attributes: ["name"] },
+        {
+          model: db.TeachingAssignment,
+          where: { class_id },
+
+          include: [
+            {
+              model: db.Subject,
+              attributes: ["name"],
+            },
+            {
+              model: db.User,
+              as: "teacher",
+              attributes: ["name"],
+            },
+          ],
+
+          required: true,
+        },
+
+        {
+          model: db.LessonTime,
+          attributes: ["start_time", "end_time", "name", "order"],
+        },
       ],
-      order: [[LessonTime, "order", "ASC"]],
+
+      order: [[db.LessonTime, "order", "ASC"]],
     });
 
     console.log("[DEBUG] Total schedules:", schedules.length);
@@ -65,7 +88,7 @@ class StudentDashboardService {
 
       let status = "-";
 
-      if (!s.Subject) {
+      if (!s.TeachingAssignment?.Subject) {
         return {
           no: index + 1,
           subject: "istirahat",
@@ -91,12 +114,14 @@ class StudentDashboardService {
           status = "alpha";
         }
       }
-      console.log(`[DEBUG] Schedule ${s.id} → ${s.Subject.name} → ${status}`);
+      console.log(
+        `[DEBUG] Schedule ${s.id} → ${s.TeachingAssignment.Subject.name} → ${status}`,
+      );
 
       return {
         no: index + 1,
-        subject: s.Subject.name,
-        teacher: s.teacher?.name || "-",
+        subject: s.TeachingAssignment.Subject.name,
+        teacher: s.TeachingAssignment.teacher?.name || "-",
         status,
       };
     });

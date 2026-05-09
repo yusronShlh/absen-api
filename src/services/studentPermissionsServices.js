@@ -100,15 +100,30 @@ class StudentPermissionService {
     console.log("[SERVICE] Permission approved");
 
     let currentDate = new Date(data.start_date);
-    const endDate = new Date(Date.end_date);
+    const endDate = new Date(data.end_date);
 
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split("T")[0];
       console.log("[SERVICE] Process date:", dateStr);
 
       const sessions = await AttendanceSession.findAll({
-        include: [{ model: Schedule, where: { class_id: classId } }],
         where: { date: dateStr },
+
+        include: [
+          {
+            model: Schedule,
+
+            include: [
+              {
+                model: db.TeachingAssignment,
+                where: { class_id: classId },
+                required: true,
+              },
+            ],
+
+            required: true,
+          },
+        ],
       });
 
       for (const session of sessions) {

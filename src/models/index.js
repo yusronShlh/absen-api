@@ -13,6 +13,7 @@ import Subject from "./subjectModel.js";
 import TeacherNotificationLog from "./teacherNotificationLogModel.js";
 import TeacherPermissionDetail from "./teacherPermissionDetailModel.js";
 import TeacherPermission from "./teacherPermissionsModel.js";
+import TeachingAssignment from "./teachingAssignmentModels.js";
 import User from "./userModel.js";
 
 const db = {};
@@ -32,7 +33,7 @@ db.PermissionType = PermissionType;
 db.Semester = Semester;
 db.Notification = Notification;
 db.TeacherNotificationLog = TeacherNotificationLog;
-
+db.TeachingAssignment = TeachingAssignment;
 // relations
 // User -student
 Student.belongsTo(User, { foreignKey: "user_id" });
@@ -52,27 +53,23 @@ Class.belongsTo(User, {
 User.hasMany(Class, { foreignKey: "homeroom_teacher_id" });
 
 // kelola jadwal
+// teaching assignment - schedule
+Schedule.belongsTo(TeachingAssignment, {
+  foreignKey: "teaching_assignment_id",
+});
 
-// class -schedule
-Schedule.belongsTo(Class, { foreignKey: "class_id" });
-Class.hasMany(Schedule, { foreignKey: "class_id" });
+TeachingAssignment.hasMany(Schedule, {
+  foreignKey: "teaching_assignment_id",
+});
 
-// lessontime -schedule
-Schedule.belongsTo(LessonTime, { foreignKey: "lesson_time_id" });
-LessonTime.hasMany(Schedule, { foreignKey: "lesson_time_id" });
+// lesson time - schedule
+Schedule.belongsTo(LessonTime, {
+  foreignKey: "lesson_time_id",
+});
 
-// subject -schedule
-Schedule.belongsTo(Subject, { foreignKey: "subject_id" });
-Subject.hasMany(Schedule, { foreignKey: "subject_id" });
-
-// teacher - schedule
-Schedule.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
-User.hasMany(Schedule, { foreignKey: "teacher_id", as: "teachingSchedules" });
-
-// === STUDENT PERMISSIONS ===
-StudentPermission.belongsTo(Student, { foreignKey: "student_id" });
-Student.hasMany(StudentPermission, { foreignKey: "student_id" });
-
+LessonTime.hasMany(Schedule, {
+  foreignKey: "lesson_time_id",
+});
 // class
 // StudentPermission.belongsTo(Class, { foreignKey: "class_id" });
 // Class.hasMany(StudentPermission, { foreignKey: "class_id" });
@@ -87,6 +84,23 @@ User.hasMany(StudentPermission, {
   as: "approvedPermissions",
 });
 
+// relasi permission type student
+StudentPermission.belongsTo(PermissionType, {
+  foreignKey: "permission_type_id",
+});
+
+PermissionType.hasMany(StudentPermission, {
+  foreignKey: "permission_type_id",
+});
+
+// student permission -> student
+StudentPermission.belongsTo(Student, {
+  foreignKey: "student_id",
+});
+
+Student.hasMany(StudentPermission, {
+  foreignKey: "student_id",
+});
 // === TEACHER PERMISSION ===
 
 TeacherPermission.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
@@ -103,6 +117,7 @@ TeacherPermissionDetail.belongsTo(TeacherPermission, {
   foreignKey: "permission_id",
 });
 TeacherPermissionDetail.belongsTo(Schedule, { foreignKey: "schedule_id" });
+Schedule.hasMany(TeacherPermissionDetail, { foreignKey: "schedule_id" });
 // ==== RELASI RELASI DI ROLE GURU  =====
 
 // schedule -> attendance sessions
@@ -130,5 +145,21 @@ PermissionType.hasMany(StudentPermission, { foreignKey: "permission_type_id" });
 // NOTIFIKASI RELASI
 Notification.belongsTo(User, { foreignKey: "user_id" });
 User.hasMany(Notification, { foreignKey: "user_id" });
+
+// teaching assignment
+// class
+TeachingAssignment.belongsTo(Class, { foreignKey: "class_id" });
+Class.hasMany(TeachingAssignment, { foreignKey: "class_id" });
+
+// subject
+TeachingAssignment.belongsTo(Subject, { foreignKey: "subject_id" });
+Subject.hasMany(TeachingAssignment, { foreignKey: "subject_id" });
+
+// teacher
+TeachingAssignment.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
+User.hasMany(TeachingAssignment, {
+  foreignKey: "teacher_id",
+  as: "teachingAssignments",
+});
 
 export default db;

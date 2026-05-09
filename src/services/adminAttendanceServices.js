@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
 import { getWIBDateString } from "../utils/timeHelper.js";
+import Class from "../models/classModel.js";
 
 const {
   Schedule,
@@ -12,6 +13,9 @@ const {
   TeacherPermission,
   TeacherPermissionDetail,
   PermissionType,
+  TeachingAssignment,
+  Subject,
+  LessonTime,
 } = db;
 
 class AdminAttendanceServices {
@@ -22,13 +26,23 @@ class AdminAttendanceServices {
     console.log("[ADMIN] Date:", selectedDate);
 
     const schedule = await Schedule.findByPk(schedule_id, {
-      include: ["Class", "Subject", "LessonTime"],
+      include: [
+        {
+          model: TeachingAssignment,
+          include: [
+            { model: Class },
+            { model: Subject },
+            { model: User, as: "teacher" },
+          ],
+        },
+        { model: LessonTime },
+      ],
     });
 
     if (!schedule) throw new Error("Jadwal tidak di temukan");
 
     const students = await Student.findAll({
-      where: { class_id: schedule.class_id },
+      where: { class_id: schedule.TeachingAssignment.class_id },
       attributes: ["id"],
       include: [{ model: User, attributes: ["id", "name"], required: true }],
     });
@@ -85,12 +99,27 @@ class AdminAttendanceServices {
     const selectedDate = date || getWIBDateString();
     console.log("[ADMIN] Date:", selectedDate);
 
-    const schedule = await Schedule.findByPk(schedule_id);
+    const schedule = await Schedule.findByPk(schedule_id, {
+      include: [{ model: TeachingAssignment }],
+    });
     if (!schedule) throw new Error("Jadwal tidak di temukan");
+
+    const students = await Student.findAll({
+      where: { class_id: schedule.TeachingAssignment.class_id },
+      attributes: ["id"],
+    });
+
+    const studentIds = students.map((s) => s.id);
+
+    const isValid = attendances.every((a) => studentIds.includes(a.student_id));
+
+    if (!isValid) {
+      throw new Error("Ada siswa tidak sesuai kelas");
+    }
 
     const permission = await TeacherPermission.findOne({
       where: {
-        teacher_id: schedule.teacher_id,
+        teacher_id: schedule.TeachingAssignment.teacher_id,
         status: "approved",
         start_date: { [Op.lte]: selectedDate },
         end_date: { [Op.gte]: selectedDate },
@@ -225,14 +254,29 @@ class AdminAttendanceServices {
       .toLowerCase();
 
     const schedules = await Schedule.findAll({
-      where: { class_id, day },
-      include: [
-        { model: db.Subject, attributes: ["id", "name"] },
-        { model: db.LessonTime, attributes: ["id", "order", "name"] },
-      ],
-      order: [[db.LessonTime, "order", "ASC"]],
-    });
+      where: { day },
 
+      include: [
+        {
+          model: TeachingAssignment,
+          where: { class_id },
+
+          include: [
+            {
+              model: Subject,
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+
+        {
+          model: LessonTime,
+          attributes: ["id", "order", "name"],
+        },
+      ],
+
+      order: [[LessonTime, "order", "ASC"]],
+    });
     return schedules;
   }
 }

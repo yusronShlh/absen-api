@@ -1,6 +1,6 @@
 import db from "../models/index.js";
 
-const { TeacherPermission, User } = db;
+const { TeacherPermission, User, TeachingAssignment } = db;
 
 const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
 function buildFileUrl(file) {
@@ -22,7 +22,18 @@ class TeacherPermissionServices {
             {
               model: db.Schedule,
               include: [
-                { model: db.Subject, attributes: ["id", "name"] },
+                {
+                  model: db.TeachingAssignment,
+                  include: [
+                    { model: db.Subject, attributes: ["id", "name"] },
+                    { model: db.Class, attributes: ["id", "name"] },
+                    {
+                      model: db.User,
+                      as: "teacher",
+                      attributes: ["id", "name"],
+                    },
+                  ],
+                },
                 {
                   model: db.LessonTime,
                   attributes: ["start_time", "end_time"],
@@ -57,7 +68,20 @@ class TeacherPermissionServices {
           include: [
             {
               model: db.Schedule,
-              include: [{ model: db.Subject }, { model: db.LessonTime }],
+              include: [
+                {
+                  model: db.TeachingAssignment,
+                  include: [
+                    { model: db.Subject },
+                    { model: db.Class },
+                    {
+                      model: db.User,
+                      as: "teacher",
+                    },
+                  ],
+                },
+                { model: db.LessonTime },
+              ],
             },
           ],
         },

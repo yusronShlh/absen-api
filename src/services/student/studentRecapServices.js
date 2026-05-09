@@ -8,6 +8,7 @@ const {
   Semester,
   AttendanceSession,
   AttendanceDetail,
+  TeachingAssignment,
 } = db;
 
 class StudentRecapService {
@@ -21,19 +22,24 @@ class StudentRecapService {
     console.log("[RECAP] Student ID:", student.id);
 
     const schedules = await Schedule.findAll({
-      where: { class_id: student.class_id },
-      include: [{ model: Subject, attributes: ["id", "name"] }],
+      include: [
+        {
+          model: db.TeachingAssignment,
+          where: { class_id: student.class_id },
+          include: [{ model: Subject, attributes: ["id", "name"] }],
+        },
+      ],
       raw: true,
     });
     const map = new Map();
 
     schedules.forEach((s) => {
-      const key = s.subject_id;
+      const key = s["TeachingAssignment.subject_id"];
 
       if (!map.has(key)) {
         map.set(key, {
-          subject_id: s.subject_id,
-          subject: s["Subject.name"],
+          subject_id: s["TeachingAssignment.subject_id"],
+          subject: s["TeachingAssignment.Subject.name"],
           scheduleIds: [],
         });
       }
@@ -195,7 +201,7 @@ class StudentRecapService {
   static async getSemesterOptions() {
     console.log("\n=== [SERVICE] GET SEMESTER OPTIONS ===");
 
-    const today = new Date().toISOString().slice(0.1);
+    const today = new Date().toISOString().slice(0, 10);
     console.log("[SEMESTER] Today:", today);
 
     const activeSemester = await Semester.findOne({
