@@ -4,7 +4,7 @@ import fs from "fs";
 const serviceAccount = JSON.parse(
   fs.readFileSync(
     new URL(
-      "./notifikasi-sumpay-firebase-adminsdk-fbsvc-bd711b93d5.json",
+      "./notifikasi-sumpay-firebase-adminsdk-fbsvc-6ec707197d.json",
       import.meta.url,
     ),
   ),

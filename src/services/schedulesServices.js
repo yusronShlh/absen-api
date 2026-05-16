@@ -104,7 +104,16 @@ class ScheduleService {
           model: TeachingAssignment,
           where: finalClassId ? { class_id: finalClassId } : undefined,
           include: [
-            { model: Class },
+            {
+              model: Class,
+              include: [
+                {
+                  model: User,
+                  as: "homeroomTeacher",
+                  attributes: ["id", "name", "nip"],
+                },
+              ],
+            },
             { model: Subject },
             { model: User, as: "teacher", attributes: ["id", "name"] },
           ],

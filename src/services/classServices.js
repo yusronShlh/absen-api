@@ -1,7 +1,7 @@
 import { where } from "sequelize";
 import db from "../models/index.js";
 //import { Class, User, Student } from "../models/index.js";
-const { Class, User, Student, Schedule } = db;
+const { Class, User, Student, Schedule, TeachingAssignment } = db;
 
 class classServices {
   static async getAll(query) {
@@ -100,9 +100,11 @@ class classServices {
       throw new Error("Kelas masih memiliki siswa");
     }
 
-    const schedule = await db.Schedule.count({ where: { class_id: id } });
-    if (schedule > 0) {
-      throw new Error("Kelas masiih memiliki jadwal");
+    const teachingAssignment = await db.TeachingAssignment.count({
+      where: { class_id: id },
+    });
+    if (teachingAssignment > 0) {
+      throw new Error("Kelas masih memiliki jadwal / assignment ");
     }
 
     await kelas.destroy();

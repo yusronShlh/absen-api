@@ -9,6 +9,7 @@ const {
   Class,
   LessonTime,
   TeacherNotificationLog,
+  TeachingAssignment,
 } = db;
 
 import {
@@ -49,9 +50,18 @@ class NotificationService {
       const schedules = await Schedule.findAll({
         where: { day: today },
         include: [
-          { model: Subject },
-          { model: Class },
-          { model: User, as: "teacher" },
+          {
+            model: db.TeachingAssignment,
+            include: [
+              { model: Class, attributes: ["id", "name"] },
+              { model: Subject, attributes: ["id", "name"] },
+              {
+                model: User,
+                as: "teacher",
+                attributes: ["id", "name", "fcm_token"],
+              },
+            ],
+          },
           { model: LessonTime },
         ],
       });
@@ -72,12 +82,14 @@ class NotificationService {
             continue;
           }
 
-          const message = `Hi ${s.teacher.name},
-        jadwal pelajaran ${s.Subject.name} kelas ${s.Class.name} telah di mulai,
-        silahkan lakukan absensi sekarang`;
+          const teacher = s.TeachingAssignment.teacher;
+          const subject = s.TeachingAssignment.Subject;
+          const kelas = s.TeachingAssignment.Class;
+
+          const message = `Hi ${teacher.name}, jadwal pelajaran ${subject.name} kelas ${kelas.name} telah dimulai, silahkan lakukan absensi sekarang`;
 
           await this.create({
-            user_id: s.teacher.id,
+            user_id: teacher.id,
             title: "Jadwal Dimulai",
             message,
           });

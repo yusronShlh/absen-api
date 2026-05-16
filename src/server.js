@@ -12,9 +12,9 @@ process.on("unhandledRejection", (err) => {
   console.error("💥 UNHANDLED REJECTION:", err);
 });
 
-// setInterval(async () => {
-//   await NotificationService.generateTeacherNotifications();
-// }, 6000);
+setInterval(async () => {
+  await NotificationService.generateTeacherNotifications();
+}, 6000);
 
 const PORT = process.env.PORT || 4000;
 
@@ -26,20 +26,20 @@ async function start() {
     await db.sequelize.sync();
     console.log("Database synced");
 
-    // async function seedPermissionTypes() {
-    //   const { PermissionType } = db;
+    async function seedPermissionTypes() {
+      const { PermissionType } = db;
 
-    //   const types = ["izin", "sakit"];
+      const types = ["izin", "sakit"];
 
-    //   for (const name of types) {
-    //     await PermissionType.findOrCreate({
-    //       where: { name },
-    //     });
-    //   }
+      for (const name of types) {
+        await PermissionType.findOrCreate({
+          where: { name },
+        });
+      }
 
-    //   console.log("✅ Permission types seeded");
-    // }
-    // await seedPermissionTypes();
+      console.log("✅ Permission types seeded");
+    }
+    await seedPermissionTypes();
 
     app.listen(process.env.PORT, "0.0.0.0", () => {
       console.log(
