@@ -93,19 +93,8 @@ class lessonTimeServices {
       throw new Error("Data tidak di temukan");
     }
 
-    // const { order, name, start_time, end_time, type } = data;
+    const { order, name, start_time, end_time, type } = data;
 
-    // if (start_time && end_time) {
-    //   if (start_time >= end_time) {
-    //     throw new Error("Waktu tidak valid");
-    //   }
-
-    //   const conflict = await this.checkOverlap(start_time, end_time, id);
-
-    //   if (conflict) {
-    //     throw new Error("Waktu bentrok ");
-    //   }
-    // }
     const newStart = start_time ?? lesson.start_time;
     const newEnd = end_time ?? lesson.end_time;
 

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import db from "../models/index.js";
 import { Op, where } from "sequelize";
 
-const { User } = db;
+const { User, TeachingAssignment, Class } = db;
 
 class teacherServices {
   // GET all guru
@@ -74,22 +74,37 @@ class teacherServices {
 
   static async delete(id) {
     console.log("DELETE:", id);
+
     const teacher = await User.findByPk(id);
 
     if (!teacher) {
-      throw new Error("Data guru tidak di temukan");
+      throw new Error("Data guru tidak ditemukan");
     }
+
     if (teacher.role !== "guru") {
-      console.log("Data ini bukan guru");
       throw new Error("Data ini bukan guru");
     }
 
-    const hasSchedule = await db.Schedule.findOne({
+    // cek apakah guru dipakai teaching assignment
+    const hasTeachingAssignment = await db.TeachingAssignment.findOne({
       where: { teacher_id: id },
     });
 
-    if (hasSchedule) {
-      throw new Error("Guru masih memiliki jadwal aktif");
+    if (hasTeachingAssignment) {
+      throw new Error(
+        "Guru tidak dapat dihapus karena masih memiliki jadwal mengajar",
+      );
+    }
+
+    // cek apakah jadi wali kelas
+    const hasHomeroom = await db.Class.findOne({
+      where: { homeroom_teacher_id: id },
+    });
+
+    if (hasHomeroom) {
+      throw new Error(
+        "Guru tidak dapat dihapus karena masih menjadi wali kelas",
+      );
     }
 
     await teacher.destroy();
