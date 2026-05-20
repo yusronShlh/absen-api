@@ -162,4 +162,9 @@ User.hasMany(TeachingAssignment, {
   as: "teachingAssignments",
 });
 
+// TEACHING ASSIGNMENT - SEMESTER
+TeachingAssignment.belongsTo(Semester, { foreignKey: "semester_id" });
+
+Semester.hasMany(TeachingAssignment, { foreignKey: "semester_id" });
+
 export default db;

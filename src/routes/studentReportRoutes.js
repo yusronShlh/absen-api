@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
+router.get("/semesters", StudentReportController.semesterSelect);
 router.get("/classes", StudentReportController.classSelect);
 router.get("/subjects", StudentReportController.getSubjects);
 router.get("/", StudentReportController.getReport);

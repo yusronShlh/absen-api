@@ -1,6 +1,6 @@
 import db from "../models/index.js";
 
-const { TeachingAssignment, Class, Subject, User, Schedule } = db;
+const { TeachingAssignment, Class, Subject, User, Schedule, Semester } = db;
 
 class TeachingAssignmentService {
   static async getAll() {
@@ -9,6 +9,7 @@ class TeachingAssignmentService {
         { model: Class, attributes: ["id", "name"] },
         { model: Subject, attributes: ["id", "name"] },
         { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
+        { model: Semester, attributes: ["id", "name"] },
       ],
       order: [["id", "DESC"]],
     });
@@ -17,10 +18,10 @@ class TeachingAssignmentService {
   }
 
   static async create(body) {
-    const { class_id, subject_id, teacher_id } = body;
+    const { class_id, subject_id, teacher_id, semester_id } = body;
 
     const existing = await TeachingAssignment.findOne({
-      where: { class_id, subject_id },
+      where: { class_id, subject_id, semester_id },
     });
 
     if (existing) {
@@ -46,11 +47,19 @@ class TeachingAssignmentService {
       throw new Error("Guru tidak di temukan");
     }
 
+    const semester = await Semester.findByPk(semester_id);
+
+    if (!semester) {
+      throw new Error("Semester tidak ditemukan");
+    }
+
     const assignment = await TeachingAssignment.create({
       class_id,
       subject_id,
       teacher_id,
+      semester_id,
     });
+
     return assignment;
   }
 
@@ -61,17 +70,17 @@ class TeachingAssignmentService {
       throw new Error("Assignment tidak di temukan");
     }
 
-    const { class_id, subject_id, teacher_id } = body;
+    const { class_id, subject_id, teacher_id, semester_id } = body;
 
     const duplicate = await TeachingAssignment.findOne({
-      where: { class_id, subject_id },
+      where: { class_id, subject_id, semester_id },
     });
 
     if (duplicate && duplicate.id !== assignment.id) {
       throw new Error("Mapel ini sudah memiliki guru di kelas tersebut");
     }
 
-    await assignment.update({ class_id, subject_id, teacher_id });
+    await assignment.update({ class_id, subject_id, teacher_id, semester_id });
 
     return assignment;
   }
@@ -122,10 +131,18 @@ class TeachingAssignmentService {
 
     console.log("[DEBUG] Teachers:", teachers.length);
 
+    const semesters = await Semester.findAll({
+      attributes: ["id", "name"],
+      order: [["start_date", "ASC"]],
+    });
+
+    console.log("[DEBUG] Semesters:", semesters.length);
+
     return {
       classes,
       subjects,
       teachers,
+      semesters,
     };
   }
 }

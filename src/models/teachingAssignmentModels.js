@@ -8,6 +8,7 @@ const TeachingAssignment = sequelize.define(
     class_id: { type: DataTypes.INTEGER, allowNull: false },
     subject_id: { type: DataTypes.INTEGER, allowNull: false },
     teacher_id: { type: DataTypes.INTEGER, allowNull: false },
+    semester_id: { type: DataTypes.INTEGER, allowNull: false },
   },
   { tableName: "teaching_assignments", timestamps: true },
 );
