@@ -6,8 +6,8 @@ async function createAdmin() {
   try {
     await sequelize.authenticate();
 
-    const username = "admin";
-    const password = "admin123";
+    const username = process.env.ADMIN_USERNAME;
+    const password = process.env.ADMIN_PASSWORD;
 
     //Cek apakah admin sudah ada
     const exists = await User.findOne({ where: { username } });

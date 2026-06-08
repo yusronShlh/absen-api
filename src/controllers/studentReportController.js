@@ -126,15 +126,15 @@ class StudentReportController {
       if (!subject_id) {
         const { subjects, data } = result;
 
-        doc.fontSize(12).text(`Nama kelas: ${result.class_name}`, 40, y);
-        y += 20;
+        doc.fontSize(12).text(`Kelas: ${result.class_name}`, 40, y);
+        y += 15;
 
         doc.text(
           `Semester: ${result.semester} (${result.academic_year})`,
           40,
           y,
         );
-        y += 15;
+        y += 20;
 
         const headers = ["Nama", ...subjects];
 
@@ -160,7 +160,7 @@ class StudentReportController {
       } else {
         const { subject, data } = result;
 
-        doc.fontSize(12).text(`Nama kelas: ${result.class_name}`, 40, y);
+        doc.fontSize(12).text(`Kelas: ${result.class_name}`, 40, y);
         y += 15;
         doc.text(
           `Semester: ${result.semester} (${result.academic_year})`,

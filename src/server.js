@@ -13,12 +13,6 @@ process.on("unhandledRejection", (err) => {
   console.error("💥 UNHANDLED REJECTION:", err);
 });
 
-cron.schedule("* * * * *", async () => {
-  console.log("[CRON] Running teacher notification job");
-
-  await NotificationService.generateTeacherNotifications();
-});
-
 const PORT = process.env.PORT || 4000;
 
 async function start() {
@@ -28,6 +22,12 @@ async function start() {
 
     await db.sequelize.sync();
     console.log("Database synced");
+
+    cron.schedule("* * * * *", async () => {
+      console.log("[CRON] Running teacher notification job");
+
+      await NotificationService.generateTeacherNotifications();
+    });
 
     async function seedPermissionTypes() {
       const { PermissionType } = db;

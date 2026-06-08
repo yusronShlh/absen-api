@@ -92,8 +92,6 @@ class StudentReportService {
 
     console.log("[DEBUG] Unique subjects:", subjects.length);
 
-    console.log("[DEBUG] Total students:", students.length);
-
     // 🔥 ALL SCHEDULE IDS
     const allScheduleIds = subjects.flatMap((s) => s.schedule_ids);
 
@@ -255,7 +253,7 @@ class StudentReportService {
 
     console.log("[DEBUG] Attendance rows:", attendance.length);
 
-    const result = students.map((a) => {
+    const result = attendance.map((a) => {
       return {
         student_id: a.student_id,
         name: a.Student?.User?.name || "-",

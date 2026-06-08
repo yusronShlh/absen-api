@@ -27,7 +27,7 @@ class AuthServices {
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES || "1d" },
+      { expiresIn: process.env.JWT_EXPIRES || "7d" },
     );
 
     // console.log("TOKEN GENERATED:", token);
