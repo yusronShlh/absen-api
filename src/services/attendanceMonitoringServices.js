@@ -236,8 +236,15 @@ class MonitoringService {
 
       const meetingNumber = lastMeeting ? lastMeeting + 1 : 1;
 
+      const class_id = schedule.TeachingAssignment.class_id;
+      const subject_id = schedule.TeachingAssignment.subject_id;
+      const teacher_id = schedule.TeachingAssignment.teacher_id;
+
       session = await AttendanceSession.create({
         schedule_id,
+        class_id,
+        subject_id,
+        teacher_id,
         meeting_number: meetingNumber,
         date,
         created_by: adminId,

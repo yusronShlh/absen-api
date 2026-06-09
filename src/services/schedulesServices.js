@@ -2,7 +2,15 @@ import db from "../models/index.js";
 import { Op } from "sequelize";
 // import lessonTime from "../models/lessonTimeModel.js";
 
-const { Schedule, TeachingAssignment, Class, Subject, LessonTime, User } = db;
+const {
+  Schedule,
+  TeachingAssignment,
+  Class,
+  Subject,
+  LessonTime,
+  User,
+  Semester,
+} = db;
 
 class ScheduleService {
   // =========

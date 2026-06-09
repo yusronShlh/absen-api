@@ -6,11 +6,11 @@ class StudentReportController {
     try {
       const { semester_id, class_id, subject_id } = req.query;
 
-      if (!semester_id) {
-        return res
-          .status(400)
-          .json({ message: "pilih semester untuk di tampilkan" });
-      }
+      // if (!semester_id) {
+      //   return res
+      //     .status(400)
+      //     .json({ message: "pilih semester untuk di tampilkan" });
+      // }
 
       if (!class_id) {
         return res

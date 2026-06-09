@@ -146,6 +146,10 @@ class AdminAttendanceServices {
       throw new Error("Absen sudah ada, gunakan edit");
     }
 
+    const class_id = schedule.TeachingAssignment.class_id;
+    const subject_id = schedule.TeachingAssignment.subject_id;
+    const teacher_id = schedule.TeachingAssignment.teacher_id;
+
     const lastMeeting = await AttendanceSession.max("meeting_number", {
       where: { schedule_id },
     });
@@ -154,6 +158,9 @@ class AdminAttendanceServices {
 
     const session = await AttendanceSession.create({
       schedule_id,
+      class_id,
+      subject_id,
+      teacher_id,
       meeting_number: meetingNumber,
       date: selectedDate,
       created_by: adminId,

@@ -124,6 +124,21 @@ Schedule.hasMany(TeacherPermissionDetail, { foreignKey: "schedule_id" });
 AttendanceSession.belongsTo(Schedule, { foreignKey: "schedule_id" });
 Schedule.hasMany(AttendanceSession, { foreignKey: "schedule_id" });
 
+// attendance session ->class
+AttendanceSession.belongsTo(Class, { foreignKey: "class_id" });
+Class.hasMany(AttendanceSession, { foreignKey: "class_id" });
+
+// attendance session -> subject
+AttendanceSession.belongsTo(Subject, { foreignKey: "subject_id" });
+Subject.hasMany(AttendanceSession, { foreignKey: "subject_id" });
+
+// attendance session -> teacher
+AttendanceSession.belongsTo(User, { foreignKey: "teacher_id", as: "teacher" });
+User.hasMany(AttendanceSession, {
+  foreignKey: "teacher_id",
+  as: "attendanceSessions",
+});
+
 // session -> detail
 AttendanceDetail.belongsTo(AttendanceSession, {
   foreignKey: "attendance_session_id",
