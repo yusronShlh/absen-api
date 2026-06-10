@@ -120,6 +120,17 @@ class studentController {
       res.status(400).json({ message: err.message });
     }
   }
+
+  static async graduateClass(req, res) {
+    try {
+      const { class_id } = req.body;
+      const result = await StudentService.graduateClass(class_id);
+
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
 }
 
 export default studentController;

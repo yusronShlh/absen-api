@@ -9,6 +9,11 @@ const Student = sequelize.define(
     gender: { type: DataTypes.ENUM("L", "P"), allowNull: false },
     class_id: { type: DataTypes.INTEGER, allowNull: false },
     user_id: { type: DataTypes.INTEGER, allowNull: false },
+    is_graduated: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   { tableName: "student", timestamps: true },
 );

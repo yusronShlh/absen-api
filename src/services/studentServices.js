@@ -14,7 +14,7 @@ class StudentService {
 
     console.log("Filter class_id:", class_id);
 
-    const where = {};
+    const where = { is_graduated: false };
 
     if (class_id) {
       where.class_id = class_id;
@@ -60,7 +60,12 @@ class StudentService {
     });
 
     // buat siswa
-    await Student.create({ user_id: user.id, class_id, gender });
+    await Student.create({
+      user_id: user.id,
+      class_id,
+      gender,
+      is_graduated: false,
+    });
     return true;
   }
 
@@ -297,6 +302,7 @@ class StudentService {
             user_id: user.id,
             class_id: kelas.id,
             gender,
+            is_graduated: false,
           },
           { transaction: t },
         );
@@ -365,6 +371,34 @@ class StudentService {
       moved_students: totalStudents,
       from_class: fromClass.name,
       to_class: toClass.name,
+    };
+  }
+
+  static async graduateClass(class_id) {
+    if (!class_id) {
+      throw new Error("Kelas wajib di pilih");
+    }
+    const kelas = await Class.findByPk(class_id);
+
+    if (!kelas) {
+      throw new Error("Kelas tidak di temukan");
+    }
+    const totalStudents = await Student.count({
+      where: { class_id, is_graduated: false },
+    });
+
+    if (totalStudents === 0) {
+      throw new Error("Tidak ada siswa aktif di kelas ini");
+    }
+    await Student.update(
+      { is_graduated: true },
+      { where: { class_id, is_graduated: false } },
+    );
+
+    return {
+      message: `Berhasil meluluskan ${totalStudents} siswa`,
+      graduated_students: totalStudents,
+      class_name: kelas.name,
     };
   }
 }

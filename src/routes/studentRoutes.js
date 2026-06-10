@@ -19,6 +19,7 @@ router.post(
   studentController.importExcel,
 );
 router.post("/promote-class", studentController.promoteClass);
+router.post("/graduate-class", studentController.graduateClass);
 router.put("/:id", studentController.update);
 router.delete("/:id", studentController.delete);
 

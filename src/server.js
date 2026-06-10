@@ -20,7 +20,7 @@ async function start() {
     await db.sequelize.authenticate();
     console.log("Database connected");
 
-    await db.sequelize.sync();
+    await db.sequelize.sync({ alter: true });
     console.log("Database synced");
 
     cron.schedule("* * * * *", async () => {
