@@ -1,4 +1,5 @@
 import StudentService from "../services/studentServices.js";
+import XLSX from "xlsx";
 
 class studentController {
   static async getAll(req, res) {
@@ -64,6 +65,57 @@ class studentController {
       const data = await StudentService.getClass();
 
       res.json({ data });
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
+
+  static async downloadTemplate(req, res) {
+    try {
+      const workbook = await StudentService.downloadTemplate();
+
+      const buffer = XLSX.write(workbook, {
+        type: "buffer",
+        bookType: "xlsx",
+      });
+
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="student-template.xlsx"',
+      );
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+
+      return res.send(buffer);
+    } catch (err) {
+      res.status(500).json({
+        message: err.message,
+      });
+    }
+  }
+
+  static async importExcel(req, res) {
+    try {
+      if (!req.file) {
+        res.status(400).json({ message: "File excel wajib diisi" });
+      }
+
+      const result = await StudentService.importExcel(req.file.buffer);
+
+      return res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+
+  static async promoteClass(req, res) {
+    try {
+      const result = await StudentService.promoteClass(req.body);
+
+      res.json(result);
     } catch (err) {
       res.status(400).json({ message: err.message });
     }

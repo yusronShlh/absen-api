@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import db from "../models/index.js";
 import { Op, where } from "sequelize";
+import { generateTeacherTemplate } from "../utils/excel/teacherTemplate.js";
+import { readTeacherExcel } from "../utils/excel/teacherImport.js";
 
 const { User, TeachingAssignment, Class } = db;
 
@@ -108,6 +110,143 @@ class teacherServices {
     }
 
     await teacher.destroy();
+  }
+
+  static async downloadTemplate() {
+    return generateTeacherTemplate();
+  }
+
+  static async importExcel(fileBuffer) {
+    const rows = readTeacherExcel(fileBuffer);
+
+    if (!rows.length) {
+      throw new Error("File excel kosong");
+    }
+
+    const errors = [];
+    const validRows = [];
+
+    // ==========================
+    // VALIDASI KOLOM WAJIB
+    // ==========================
+    rows.forEach((row, index) => {
+      const rowNumber = index + 2;
+
+      const nip = String(row.nip || "").trim();
+      const name = String(row.name || "").trim();
+
+      if (!nip) {
+        errors.push({
+          row: rowNumber,
+          nip,
+          name,
+          reason: "NIP wajib diisi",
+        });
+        return;
+      }
+
+      if (!name) {
+        errors.push({
+          row: rowNumber,
+          nip,
+          name,
+          reason: "Nama wajib diisi",
+        });
+        return;
+      }
+
+      validRows.push({
+        row: rowNumber,
+        nip,
+        name,
+      });
+    });
+
+    // ==========================
+    // CEK DUPLIKAT DALAM FILE
+    // ==========================
+    const nipCount = {};
+
+    validRows.forEach((row) => {
+      nipCount[row.nip] = (nipCount[row.nip] || 0) + 1;
+    });
+
+    const duplicateNips = Object.keys(nipCount).filter(
+      (nip) => nipCount[nip] > 1,
+    );
+
+    const filteredRows = [];
+
+    validRows.forEach((row) => {
+      if (duplicateNips.includes(row.nip)) {
+        errors.push({
+          row: row.row,
+          nip: row.nip,
+          name: row.name,
+          reason: "NIP duplikat dalam file",
+        });
+      } else {
+        filteredRows.push(row);
+      }
+    });
+
+    // ==========================
+    // CEK DATABASE
+    // ==========================
+    const existingTeachers = await User.findAll({
+      where: {
+        nip: filteredRows.map((r) => r.nip),
+      },
+      attributes: ["nip"],
+    });
+
+    const existingNips = new Set(
+      existingTeachers.map((teacher) => teacher.nip),
+    );
+
+    const finalRows = [];
+
+    filteredRows.forEach((row) => {
+      if (existingNips.has(row.nip)) {
+        errors.push({
+          row: row.row,
+          nip: row.nip,
+          name: row.name,
+          reason: "NIP sudah terdaftar",
+        });
+      } else {
+        finalRows.push(row);
+      }
+    });
+
+    // ==========================
+    // INSERT DATA
+    // ==========================
+    const teachersToCreate = [];
+
+    for (const row of finalRows) {
+      const hash = await bcrypt.hash(row.nip, 10);
+
+      teachersToCreate.push({
+        name: row.name,
+        nip: row.nip,
+        password: hash,
+        role: "guru",
+        username: null,
+        nisn: null,
+      });
+    }
+
+    if (teachersToCreate.length) {
+      await User.bulkCreate(teachersToCreate);
+    }
+
+    return {
+      total: rows.length,
+      success: teachersToCreate.length,
+      failed: errors.length,
+      errors,
+    };
   }
 }
 export default teacherServices;

@@ -1,4 +1,5 @@
 import teacherServices from "../services/teacherServices.js";
+import XLSX from "xlsx";
 
 class teacherController {
   static async getAll(req, res) {
@@ -44,6 +45,46 @@ class teacherController {
     } catch (err) {
       res.status(400).json({ message: err.message });
       console.log(err);
+    }
+  }
+
+  static async downloadTemplate(req, res) {
+    try {
+      const workbook = await teacherServices.downloadTemplate();
+
+      const buffer = XLSX.write(workbook, {
+        type: "buffer",
+        bookType: "xlsx",
+      });
+
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="teacher-template.xlsx"',
+      );
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+
+      return res.send(buffer);
+    } catch (err) {
+      res.status(500).json({
+        message: err.message,
+      });
+    }
+  }
+
+  static async importExcel(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "File excel wajib di isi" });
+      }
+
+      const result = await teacherServices.importExcel(req.file.buffer);
+      return res.json({ message: "Import data guru selesai", ...result });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
     }
   }
 }
