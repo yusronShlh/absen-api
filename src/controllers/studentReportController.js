@@ -58,10 +58,11 @@ class StudentReportController {
           .json({ message: "Pilih kelas untuk di tampilkan" });
       }
 
-      const data = await StudentReportService.getSubjectsByClass(
+      const data = await StudentReportService.getSubjectsByClass(class_id);
+      console.log({
         semester_id,
         class_id,
-      );
+      });
 
       return res.json({ message: "Berhasil ambil mata pelajaran", data });
     } catch (err) {

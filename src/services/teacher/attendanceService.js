@@ -82,6 +82,7 @@ class AttendaceService {
     const students = await Student.findAll({
       where: {
         class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
       },
 
       include: [
@@ -196,7 +197,10 @@ class AttendaceService {
 
     // Validasi siswa
     const students = await Student.findAll({
-      where: { class_id: schedule.TeachingAssignment.class_id },
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
+      },
       attributes: ["id"],
       include: [{ model: User, required: true }],
     });

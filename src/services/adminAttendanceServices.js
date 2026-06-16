@@ -42,7 +42,10 @@ class AdminAttendanceServices {
     if (!schedule) throw new Error("Jadwal tidak di temukan");
 
     const students = await Student.findAll({
-      where: { class_id: schedule.TeachingAssignment.class_id },
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
+      },
       attributes: ["id"],
       include: [{ model: User, attributes: ["id", "name"], required: true }],
     });
@@ -105,7 +108,10 @@ class AdminAttendanceServices {
     if (!schedule) throw new Error("Jadwal tidak di temukan");
 
     const students = await Student.findAll({
-      where: { class_id: schedule.TeachingAssignment.class_id },
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
+      },
       attributes: ["id"],
     });
 

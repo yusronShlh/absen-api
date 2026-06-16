@@ -210,7 +210,10 @@ class MonitoringService {
     }
 
     const students = await Student.findAll({
-      where: { class_id: schedule.TeachingAssignment.class_id },
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
+      },
       attributes: ["id"],
       include: [{ model: User, required: true }],
     });
@@ -344,7 +347,10 @@ class MonitoringService {
 
     // 👨‍🎓 Ambil semua siswa di kelas
     const students = await Student.findAll({
-      where: { class_id: schedule.TeachingAssignment.class_id },
+      where: {
+        class_id: schedule.TeachingAssignment.class_id,
+        is_graduated: false,
+      },
       attributes: ["id"],
       include: [
         {
