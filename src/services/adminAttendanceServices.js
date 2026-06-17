@@ -134,14 +134,25 @@ class AdminAttendanceServices {
         {
           model: TeacherPermissionDetail,
           as: "details",
-          where: { schedule_id },
-          required: true,
+          required: false,
         },
       ],
     });
 
     if (!permission) {
       throw new Error("Guru tidak izin, admin tidak boleh input");
+    }
+
+    if (!permission.is_full_day) {
+      const hasSchedule = permission.details.some(
+        (d) => d.schedule_id === Number(schedule_id),
+      );
+
+      if (!hasSchedule) {
+        throw new Error(
+          "Guru tidak izin pada jadwal ini, admin tidak boleh input",
+        );
+      }
     }
 
     const existing = await AttendanceSession.findOne({

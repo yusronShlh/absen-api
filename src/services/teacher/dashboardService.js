@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import db from "../../models/index.js";
+import { getWIBDateString } from "../../utils/timeHelper.js";
 
 const {
   Schedule,
@@ -52,72 +53,87 @@ class DashboardService {
   }
 
   static async getAttendanceStats(teacherId) {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const today = getWIBDateString();
 
-    // HADIR
-    const hadir = await AttendanceSession.count({
-      include: [
-        {
-          model: Schedule,
-          include: [
-            {
-              model: db.TeachingAssignment,
-              where: { teacher_id: teacherId },
-              required: true,
-            },
-          ],
-        },
-      ],
+    const currentDate = new Date(today);
+
+    const startOfMonth = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1,
+    ).padStart(2, "0")}-01`;
+
+    // semua session guru bulan ini
+    const sessions = await AttendanceSession.findAll({
       where: {
-        is_teacher_present: true,
-        createdAt: {
-          [Op.between]: [startOfMonth, now],
+        date: {
+          [Op.between]: [startOfMonth, today],
         },
       },
-    });
 
-    // ALPHA
-    const alpha = await AttendanceSession.count({
       include: [
         {
           model: Schedule,
-          include: [
-            {
-              model: db.TeachingAssignment,
-              where: { teacher_id: teacherId },
-              required: true,
-            },
-          ],
           required: true,
+
+          include: [
+            {
+              model: TeachingAssignment,
+              where: { teacher_id: teacherId },
+              required: true,
+            },
+          ],
         },
       ],
-      where: {
-        is_teacher_present: false,
-        createdAt: { [Op.between]: [startOfMonth, now] },
-      },
     });
 
-    // IZIN
-    const izin = await TeacherPermission.count({
+    // semua izin guru yang overlap bulan ini
+    const permissions = await TeacherPermission.findAll({
       where: {
         teacher_id: teacherId,
         status: "approved",
-        createdAt: {
-          [Op.between]: [startOfMonth, now],
+
+        start_date: {
+          [Op.lte]: today,
+        },
+
+        end_date: {
+          [Op.gte]: startOfMonth,
         },
       },
     });
 
-    const total = hadir + izin + alpha;
+    let hadir = 0;
+    let izin = 0;
+    let alpha = 0;
 
-    const percentage = total === 0 ? 0 : Math.round((hadir / total) * 100);
+    for (const sess of sessions) {
+      console.log("SESSION:", sess.id, sess.date);
+      const hasPermission = permissions.find(
+        (p) => sess.date >= p.start_date && sess.date <= p.end_date,
+      );
+
+      console.log(
+        "MATCH:",
+        hasPermission
+          ? `${hasPermission.start_date} - ${hasPermission.end_date}`
+          : "TIDAK ADA",
+      );
+
+      if (hasPermission) {
+        izin++;
+      } else if (sess.is_teacher_present) {
+        hadir++;
+      } else {
+        alpha++;
+      }
+    }
+
+    const total = hadir + izin + alpha;
 
     return {
       hadir,
       izin,
       alpha,
-      percentage,
+      percentage: total === 0 ? 0 : Math.round((hadir / total) * 100),
     };
   }
 

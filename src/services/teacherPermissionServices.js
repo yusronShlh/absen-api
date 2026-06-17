@@ -1,5 +1,6 @@
+import { Op } from "sequelize";
 import db from "../models/index.js";
-
+import { getWIBDateString } from "../utils/timeHelper.js";
 const { TeacherPermission, User, TeachingAssignment } = db;
 
 const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
@@ -12,7 +13,11 @@ class TeacherPermissionServices {
   static async getAll() {
     console.log("[SERVICE] getAll teacher permissions");
 
+    const today = getWIBDateString();
+    console.log("Today:", today);
+
     const data = await TeacherPermission.findAll({
+      where: { start_date: { [Op.lte]: today }, end_date: { [Op.gte]: today } },
       include: [
         { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
         {

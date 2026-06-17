@@ -1,4 +1,6 @@
+import { Op } from "sequelize";
 import db from "../models/index.js";
+import { getWIBDateString } from "../utils/timeHelper.js";
 
 const {
   StudentPermission,
@@ -20,7 +22,11 @@ function buildStudentFileUrl(file) {
 class StudentPermissionService {
   static async getAll() {
     console.log("[SERVICE] getAll permissions");
+
+    const today = getWIBDateString();
+    console.log("Today: ", today);
     const data = await StudentPermission.findAll({
+      where: { start_date: { [Op.lte]: today }, end_date: { [Op.gte]: today } },
       include: [
         {
           model: Student,
