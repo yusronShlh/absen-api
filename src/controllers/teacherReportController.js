@@ -4,14 +4,18 @@ import PDFDocument from "pdfkit";
 class TeacherReportController {
   static async getReport(req, res) {
     try {
-      const { semester_id, teacher_id } = req.query;
+      const { semester_id, month, year, teacher_id } = req.query;
 
-      if (!semester_id) {
-        return res.status(400).json({ message: "semester wajib di isi" });
+      if (!semester_id && !(month && year)) {
+        return res
+          .status(400)
+          .json({ message: "semester atau bulan dan tahun wajib di isi" });
       }
 
       const data = await TeacherReportService.getReport({
         semester_id,
+        month,
+        year,
         teacher_id,
       });
 
@@ -33,32 +37,57 @@ class TeacherReportController {
     }
   }
 
+  static async getPeriods(req, res) {
+    try {
+      const data = await TeacherReportService.getPeriods();
+
+      return res.json({
+        message: "Berhasil ambil daftar periode",
+        data,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: err.message,
+      });
+    }
+  }
+
   static async getTeachers(req, res) {
     try {
-      const { semester_id } = req.query;
+      const { semester_id, month, year } = req.query;
 
-      if (!semester_id) {
-        return res.status(400).json({ message: "Semester wajib di isi" });
+      if (!semester_id && !(month && year)) {
+        return res
+          .status(400)
+          .json({ message: "Semester atau bulan dan tahun wajib di isi" });
       }
 
-      const data = await TeacherReportService.getBySemesters(semester_id);
+      const data = await TeacherReportService.getTeachers({
+        semester_id,
+        month,
+        year,
+      });
 
       return res.json({ message: "Berhasil ambil data guru", data });
     } catch (err) {
+      console.error("[ERROR GET TEACHERS]", err.message);
+
       res.status(500).json({ message: err.message });
     }
   }
 
   static async exportPdf(req, res) {
     try {
-      const { semester_id, teacher_id } = req.query;
+      const { semester_id, month, year, teacher_id } = req.query;
 
-      if (!semester_id) {
+      if (!semester_id && !(month && year)) {
         return res.status(400).json({ message: "semester wajib di isi" });
       }
 
       const result = await TeacherReportService.getReportForExport({
         semester_id,
+        month,
+        year,
         teacher_id,
       });
 
@@ -76,6 +105,15 @@ class TeacherReportController {
       // TITLE
       // ======================
       doc.fontSize(16).text("LAPORAN ABSENSI GURU", { align: "center" });
+      if (semester_id) {
+        doc.fontSize(10).text(`Periode Semester`, {
+          align: "center",
+        });
+      } else {
+        doc.fontSize(10).text(`Periode Bulan ${month}/${year}`, {
+          align: "center",
+        });
+      }
       doc.moveDown(2);
 
       let y = doc.y;

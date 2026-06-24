@@ -4,7 +4,7 @@ import PDFDocument from "pdfkit";
 class StudentReportController {
   static async getReport(req, res) {
     try {
-      const { semester_id, class_id, subject_id } = req.query;
+      const { semester_id, month, year, class_id, subject_id } = req.query;
 
       // if (!semester_id) {
       //   return res
@@ -17,9 +17,16 @@ class StudentReportController {
           .status(400)
           .json({ message: "Pilih kelas untuk di tampilkan" });
       }
+      if (!semester_id && !(month && year)) {
+        return res
+          .status(400)
+          .json({ message: "semester atau bulan dan tahun wajib di isi" });
+      }
 
       const data = await StudentReportService.getReport({
         semester_id,
+        month,
+        year,
         class_id,
         subject_id,
       });
@@ -43,33 +50,54 @@ class StudentReportController {
     }
   }
 
-  static async getSubjects(req, res) {
+  static async getPeriods(req, res) {
     try {
-      const { semester_id, class_id } = req.query;
+      const data = await StudentReportService.getPeriods();
 
-      if (!semester_id) {
-        return res
-          .status(400)
-          .json({ message: "pilih semester untuk di tampilkan" });
-      }
-      if (!class_id) {
-        return res
-          .status(400)
-          .json({ message: "Pilih kelas untuk di tampilkan" });
-      }
-
-      const data = await StudentReportService.getSubjectsByClass(class_id);
-      console.log({
-        semester_id,
-        class_id,
+      return res.json({
+        message: "Berhasil ambil daftar periode",
+        data,
       });
-
-      return res.json({ message: "Berhasil ambil mata pelajaran", data });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      res.status(500).json({
+        message: err.message,
+      });
     }
   }
 
+  static async getSubjects(req, res) {
+    try {
+      const { semester_id, month, year, class_id } = req.query;
+
+      if (!class_id) {
+        return res.status(400).json({
+          message: "Pilih kelas untuk ditampilkan",
+        });
+      }
+
+      if (!semester_id && !(month && year)) {
+        return res.status(400).json({
+          message: "semester atau bulan dan tahun wajib di isi",
+        });
+      }
+
+      const data = await StudentReportService.getSubjectsByClass({
+        semester_id,
+        month,
+        year,
+        class_id,
+      });
+
+      return res.json({
+        message: "Berhasil ambil mata pelajaran",
+        data,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: err.message,
+      });
+    }
+  }
   static async semesterSelect(req, res) {
     try {
       const data = await StudentReportService.getSemesters();
@@ -82,13 +110,15 @@ class StudentReportController {
 
   static async exportPdf(req, res) {
     try {
-      const { semester_id, class_id, subject_id } = req.query;
+      const { semester_id, month, year, class_id, subject_id } = req.query;
 
       if (!class_id) {
         return res.status(400).json({ message: "Kelas wajib di isi" });
       }
       const result = await StudentReportService.getReport({
         semester_id,
+        month,
+        year,
         class_id,
         subject_id,
       });
@@ -123,6 +153,16 @@ class StudentReportController {
       doc
         .fontSize(16)
         .text("LAPORAN ABSENSI SISWA", 0, 40, { align: "center" });
+
+      if (semester_id) {
+        doc
+          .fontSize(10)
+          .text(`Periode Semester ${result.semester}`, { align: "center" });
+      } else {
+        doc
+          .fontSize(10)
+          .text(`Periode Bulan ${month}/${year}`, { align: "center" });
+      }
 
       if (!subject_id) {
         const { subjects, data } = result;

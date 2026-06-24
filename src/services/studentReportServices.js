@@ -1,5 +1,6 @@
 import { col, fn, literal, Op } from "sequelize";
 import db from "../models/index.js";
+import { getCurrentWIBMonth, getCurrentWIBYear } from "../utils/timeHelper.js";
 
 const {
   Student,
@@ -13,49 +14,60 @@ const {
 } = db;
 
 class StudentReportService {
-  static async getReport({ semester_id, class_id, subject_id }) {
+  static async getReport({ semester_id, month, year, class_id, subject_id }) {
     console.log("\n=== [SERVICE] STUDENT REPORT START ===");
     console.log("[SERVICE] Input:", { class_id, subject_id });
 
-    const semester = await Semester.findByPk(semester_id);
-    if (!semester) {
-      throw new Error("Semester tidak ditemukan");
+    let start;
+    let end;
+    let semesterName = null;
+    let academicYear = null;
+
+    if (semester_id) {
+      const semester = await Semester.findByPk(semester_id);
+
+      if (!semester) {
+        throw new Error("Semester tidak ditemukan");
+      }
+      start = semester.start_date;
+      end = semester.end_date;
+      semesterName = semester.name;
+      academicYear = semester.academic_year;
+    } else if (month && year) {
+      start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+      end = new Date(year, month, 0).toISOString().split("T")[0];
+    } else {
+      throw new Error("Semester atau bulan dan tahun wajib di isi");
     }
-
-    const classData = await Class.findByPk(class_id, { attributes: ["name"] });
-
+    const classData = await Class.findByPk(class_id);
     if (!classData) {
       throw new Error("Kelas tidak ditemukan");
     }
-    const class_name = classData.name;
 
     let result;
 
     if (!subject_id) {
-      result = await this.getReportByClass(semester_id, class_id);
+      result = await this.getReportByClass(start, end, class_id);
     } else {
-      result = await this.getReportBySubject(semester_id, class_id, subject_id);
+      result = await this.getReportBySubject(start, end, class_id, subject_id);
     }
 
     return {
-      class_name,
-      semester: semester.name,
-      academic_year: semester.academic_year,
+      class_name: classData.name,
+      semester: semesterName,
+      academic_year: academicYear,
+      month,
+      year,
       ...result,
     };
   }
 
   // =========================================
-  // 🔥 MODE 1: CLASS (GROUP BY SUBJECT)
+  // MODE CLASS
   // =========================================
-  static async getReportByClass(semester_id, class_id) {
+  static async getReportByClass(start, end, class_id) {
     console.log("\n[MODE] CLASS REPORT (GROUPED SUBJECT)");
-
-    const semester = await Semester.findByPk(semester_id);
-
-    if (!semester) {
-      throw new Error("Semester tidak ditemukan");
-    }
 
     // ==========================
     // Ambil mapel yang benar-benar
@@ -68,7 +80,7 @@ class StudentReportService {
         class_id,
 
         date: {
-          [Op.between]: [semester.start_date, semester.end_date],
+          [Op.between]: [start, end],
         },
       },
 
@@ -129,7 +141,7 @@ class StudentReportService {
             class_id,
 
             date: {
-              [Op.between]: [semester.start_date, semester.end_date],
+              [Op.between]: [start, end],
             },
           },
         },
@@ -195,14 +207,8 @@ class StudentReportService {
   // =========================================
   // 🔥 MODE 2: SUBJECT (DETAIL)
   // =========================================
-  static async getReportBySubject(semester_id, class_id, subject_id) {
+  static async getReportBySubject(start, end, class_id, subject_id) {
     console.log("\n[MODE] SUBJECT REPORT");
-
-    const semester = await Semester.findByPk(semester_id);
-
-    if (!semester) {
-      throw new Error("Semester tidak ditemukan");
-    }
 
     const subject = await Subject.findByPk(subject_id, {
       attributes: ["id", "name"],
@@ -262,7 +268,7 @@ class StudentReportService {
             subject_id,
 
             date: {
-              [Op.between]: [semester.start_date, semester.end_date],
+              [Op.between]: [start, end],
             },
           },
         },
@@ -305,13 +311,69 @@ class StudentReportService {
     return classes;
   }
 
-  static async getSubjectsByClass(class_id) {
-    console.log("\n=== [SERVICE] GET SUBJECTS BY CLASS ===");
-    console.log("[SERVICE] Class ID:", class_id);
+  static async getPeriods() {
+    const months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
 
-    const assignments = await TeachingAssignment.findAll({
+    const currentYear = getCurrentWIBYear();
+    const currentMonth = getCurrentWIBMonth();
+
+    const data = [];
+
+    for (let i = 1; i <= currentMonth; i++) {
+      data.push({
+        month: i,
+        year: currentYear,
+        label: `${months[i - 1]} ${currentYear}`,
+      });
+    }
+
+    return data;
+  }
+
+  static async getSubjectsByClass({ semester_id, month, year, class_id }) {
+    console.log("\n=== [SERVICE] GET SUBJECTS BY CLASS ===");
+
+    let start;
+    let end;
+
+    if (semester_id) {
+      const semester = await Semester.findByPk(semester_id);
+
+      if (!semester) {
+        throw new Error("Semester tidak ditemukan");
+      }
+
+      start = semester.start_date;
+      end = semester.end_date;
+    } else if (month && year) {
+      start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+      end = new Date(year, month, 0).toISOString().split("T")[0];
+    } else {
+      throw new Error("Semester atau bulan dan tahun wajib di isi");
+    }
+
+    const sessions = await AttendanceSession.findAll({
+      attributes: ["subject_id"],
+
       where: {
         class_id,
+        date: {
+          [Op.between]: [start, end],
+        },
       },
 
       include: [
@@ -322,13 +384,20 @@ class StudentReportService {
       ],
     });
 
-    const subjects = assignments.map((assignment) => ({
-      subject_id: assignment.subject_id,
-      subject_name: assignment.Subject.name,
-    }));
+    const subjectMap = {};
+
+    sessions.forEach((session) => {
+      if (session.subject_id && !subjectMap[session.subject_id]) {
+        subjectMap[session.subject_id] = {
+          subject_id: session.subject_id,
+          subject_name: session.Subject.name,
+        };
+      }
+    });
+
+    const subjects = Object.values(subjectMap);
 
     console.log("[DEBUG] Unique subjects:", subjects.length);
-    console.log("[SERVICE] DONE");
 
     return subjects;
   }

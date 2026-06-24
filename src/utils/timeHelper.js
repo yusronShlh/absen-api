@@ -17,3 +17,11 @@ export function getWIBDayName() {
     .toLocaleDateString("id-ID", { weekday: "long" })
     .toLowerCase();
 }
+
+export function getCurrentWIBYear() {
+  return getWIBDate().getFullYear();
+}
+
+export function getCurrentWIBMonth() {
+  return getWIBDate().getMonth() + 1;
+}

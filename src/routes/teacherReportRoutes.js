@@ -9,6 +9,7 @@ router.use(authMiddleware);
 router.use(roleMiddleware("admin"));
 
 router.get("/semesters", TeacherReportController.getAll);
+router.get("/periods", TeacherReportController.getPeriods);
 router.get("/teachers", TeacherReportController.getTeachers);
 router.get("/", TeacherReportController.getReport);
 router.get("/export", TeacherReportController.exportPdf);

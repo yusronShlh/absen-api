@@ -17,14 +17,15 @@ class DashboardServices {
 
     // STATISTIK SISWA
     const totalStudents = await Student.count({
+      where: { is_graduated: false },
       include: [{ model: User, required: true, where: { deleted_at: null } }],
     });
     const maleStudents = await Student.count({
-      where: { gender: "L" },
+      where: { gender: "L", is_graduated: false },
       include: [{ model: User, required: true, where: { deleted_at: null } }],
     });
     const femaleStudents = await Student.count({
-      where: { gender: "P" },
+      where: { gender: "P", is_graduated: false },
       include: [{ model: User, required: true, where: { deleted_at: null } }],
     });
 
@@ -67,6 +68,7 @@ class DashboardServices {
           model: Student,
           attributes: [],
           required: false, //Left join
+          where: { is_graduated: false },
           include: [
             {
               model: User,

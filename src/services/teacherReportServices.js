@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
+import { getCurrentWIBMonth, getCurrentWIBYear } from "../utils/timeHelper.js";
 
 const {
   Semester,
@@ -14,18 +15,31 @@ const {
 } = db;
 
 class TeacherReportService {
-  static async getReport({ semester_id, teacher_id }) {
+  static async getReport({ semester_id, month, year, teacher_id }) {
     console.log("\n=== [SERVICE] TEACHER REPORT START ===");
 
-    const semester = await Semester.findByPk(semester_id);
-    if (!semester) {
-      throw new Error("Semester tidak di temukan");
+    let start;
+    let end;
+    if (semester_id) {
+      const semester = await Semester.findByPk(semester_id);
+
+      if (!semester) throw new Error("Semester tidak ditemukan");
+
+      start = semester.start_date;
+      end = semester.end_date;
+      console.log("[MODE] SEMESTER", semester.name, start, "→", end);
+    } else if (month && year) {
+      start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+      end = new Date(year, month, 0).toISOString().split("T")[0];
+
+      console.log("[MODE] MONTH", month, year, start, "→", end);
+    } else {
+      throw new Error("Semester atau bulan dan tahun wajib di isi");
+      console.log("semester_id:", semester_id);
+      console.log("month:", month);
+      console.log("year:", year);
     }
-
-    const start = semester.start_date;
-    const end = semester.end_date;
-
-    console.log("[DEBUG] Semester Range:", start, "→", end);
 
     if (!teacher_id) {
       return await this.getAllTeachers(start, end);
@@ -245,51 +259,76 @@ ORDER BY sub.name ASC, c.name ASC
     return semesters;
   }
 
-  static async getBySemesters(semester_id) {
-    console.log("\n=== [SERVICE] GET TEACHERS BY SEMESTER ===");
-    console.log("Semester ID:", semester_id);
+  static async getPeriods() {
+    const months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
 
-    const semester = await sequelize.query(
-      `SELECT id,start_date,end_date FROM semesters WHERE id= :semester_id`,
-      { replacements: { semester_id }, type: sequelize.QueryTypes.SELECT },
-    );
-    if (!semester.length) {
-      throw new Error("Semester tidak di temukan");
+    const currentYear = getCurrentWIBYear();
+    const currentMonth = getCurrentWIBMonth();
+
+    const data = [];
+
+    for (let i = 1; i <= currentMonth; i++) {
+      data.push({
+        month: i,
+        year: currentYear,
+        label: `${months[i - 1]} ${currentYear}`,
+      });
     }
 
-    const { start_date, end_date } = semester[0];
-    console.log("[DEBUG] Range:", start_date, "→", end_date);
+    return data;
+  }
+
+  static async getTeachers({ semester_id, month, year }) {
+    console.log("\n=== [SERVICE] GET TEACHERS ===");
+
+    let start;
+    let end;
+
+    if (semester_id) {
+      const semester = await Semester.findByPk(semester_id);
+
+      if (!semester) {
+        throw new Error("Semester tidak ditemukan");
+      }
+
+      start = semester.start_date;
+      end = semester.end_date;
+
+      console.log("[MODE] SEMESTER", start, "→", end);
+    } else if (month && year) {
+      start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+      end = new Date(year, month, 0).toISOString().split("T")[0];
+
+      console.log("[MODE] MONTH", month, year, start, "→", end);
+    } else {
+      throw new Error("Semester atau bulan dan tahun wajib di isi");
+    }
 
     const teachers = await sequelize.query(
-      `
-  SELECT DISTINCT u.id, u.name
-  FROM attendance_sessions s
-
-  JOIN schedules sc
-    ON s.schedule_id = sc.id
-
-  JOIN teaching_assignments ta
-    ON sc.teaching_assignment_id = ta.id
-
-  JOIN users u
-    ON ta.teacher_id = u.id
-
-  WHERE s.date BETWEEN :start_date AND :end_date
-
-  ORDER BY u.name ASC
-`,
-      {
-        replacements: { start_date, end_date },
-        type: sequelize.QueryTypes.SELECT,
-      },
+      `SELECT DISTINCT u.id,u.name FROM attendance_sessions s JOIN schedules sc ON s.schedule_id=sc.id JOIN teaching_assignments ta ON sc.teaching_assignment_id=ta.id JOIN users u ON ta.teacher_id=u.id WHERE s.date BETWEEN :start AND :end ORDER BY u.name ASC`,
+      { replacements: { start, end }, type: sequelize.QueryTypes.SELECT },
     );
     console.log("[DEBUG] Total teachers:", teachers.length);
 
     return teachers;
   }
 
-  static async getReportForExport({ semester_id, teacher_id }) {
-    const raw = await this.getReport({ semester_id, teacher_id });
+  static async getReportForExport({ semester_id, month, year, teacher_id }) {
+    const raw = await this.getReport({ semester_id, month, year, teacher_id });
 
     if (!teacher_id) {
       return {
