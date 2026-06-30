@@ -4,7 +4,7 @@ import path from "path";
 import console from "console";
 
 const uploadDir =
-  process.env.UPLOAD_TEACHER || path.join("uploads", "teacher-permissions");
+  process.env.UPLOAD_TEACHERS || path.join("uploads", "teacher-permissions");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

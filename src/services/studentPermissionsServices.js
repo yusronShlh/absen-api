@@ -16,7 +16,7 @@ const {
 const BASE_URL = process.env.BASE_URL || "http://100.105.63.68:4000";
 function buildStudentFileUrl(file) {
   if (!file) return null;
-  return `${BASE_URL}/${file}`;
+  return `${BASE_URL}/uploads/teacher-permissions/${file}`;
 }
 
 class StudentPermissionService {

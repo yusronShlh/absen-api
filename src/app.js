@@ -19,6 +19,7 @@ import adminAttendanceRoutes from "./routes/adminAttendanceRoutes.js";
 import studentReportRoutes from "./routes/studentReportRoutes.js";
 import teacherReportRoutes from "./routes/teacherReportRoutes.js";
 import semesterRoutes from "./routes/semesterRoutes.js";
+import adminProfileRoutes from "./routes/adminProfileRoutes.js";
 import teachingAssignmentRoutes from "./routes/teachingAssignmentRoutes.js";
 import StudentDashboardRoutes from "./routes/student/studentDashboardRoutes.js";
 import StudentRecapRoutes from "./routes/student/studentRecapRoutes.js";
@@ -26,13 +27,19 @@ import teacherRecapRoutes from "./routes/teacher/teacherRecapRoutes.js";
 import path from "path";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import fcmRoutes from "./routes/fcmRoutes.js";
+import appVersionRoutes from "./routes/appVersionRoutes.js";
 
 const app = express();
 app.use(cors());
 // app.use(cors({ origin: ["https://admin.auroranova.my.id"] }));
 app.use(express.json());
 
-app.use("/uploads", express.static(path.join("uploads")));
+// download file apk
+app.use("/apk", express.static("/mnt/cloud/YASPA/apk"));
+// update aplikasi
+app.use("/api/app", appVersionRoutes);
+
+app.use("/uploads", express.static(process.env.UPLOAD_ROOT));
 
 app.use("/api/auth", router);
 app.use("/api/admin/students", studentRoutes);
@@ -50,6 +57,7 @@ app.use("/api/admin/reports/student-attendance", studentReportRoutes);
 app.use("/api/admin/reports/teacher-attendance", teacherReportRoutes);
 app.use("/api/admin/semesters", semesterRoutes);
 app.use("/api/admin/teaching-assignments", teachingAssignmentRoutes);
+app.use("/api/admin/profile", adminProfileRoutes);
 
 app.use("/api/teacher", teacherAttendanceRoutes);
 app.use("/api/teacher/dashboard", teacherDashboardRoutes);

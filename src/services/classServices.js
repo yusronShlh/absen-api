@@ -115,6 +115,7 @@ class classServices {
       include: [
         { model: User, as: "homeroomTeacher", attributes: ["id", "name"] },
         {
+          where: { is_graduated: false },
           model: Student,
           include: [{ model: User, attributes: ["id", "name", "nisn"] }],
         },
