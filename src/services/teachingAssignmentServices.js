@@ -56,6 +56,7 @@ class TeachingAssignmentService {
   }
 
   static async update(id, body) {
+    const { class_id, subject_id, teacher_id, semester_id } = body;
     const assignment = await TeachingAssignment.findByPk(id);
 
     if (!assignment) {
@@ -72,12 +73,10 @@ class TeachingAssignmentService {
         assignment.subject_id !== subject_id
       ) {
         throw new Error(
-          "Kelas, mapel, dan semester tidak boleh diubah karena sudah digunakan pada jadwal",
+          "Kelas & mapel tidak boleh diubah karena sudah digunakan pada jadwal",
         );
       }
     }
-
-    const { class_id, subject_id, teacher_id, semester_id } = body;
 
     const duplicate = await TeachingAssignment.findOne({
       where: { class_id, subject_id },

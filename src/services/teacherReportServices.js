@@ -57,16 +57,6 @@ class TeacherReportService {
     });
 
     console.log("[DEBUG] Total teachers:", teachers.length);
-
-    const schedules = await Schedule.findAll({
-      include: [
-        {
-          model: db.TeachingAssignment,
-          attributes: ["teacher_id"],
-          required: true,
-        },
-      ],
-    });
     const sessions = await AttendanceSession.findAll({
       where: { date: { [Op.between]: [start, end] } },
     });
@@ -88,37 +78,28 @@ class TeacherReportService {
       let izin = 0;
       let alpha = 0;
 
-      const teacherSchedules = schedules.filter(
-        (s) => s.TeachingAssignment.teacher_id === teacher.id,
+      const teacherSessions = sessions.filter(
+        (sess) => sess.teacher_id === teacher.id,
       );
 
-      teacherSchedules.forEach((schedule) => {
-        const scheduleSessions = sessions.filter(
-          (sess) => sess.schedule_id === schedule.id,
+      teacherSessions.forEach((sess) => {
+        total++;
+
+        const hasPermission = permissions.find(
+          (p) =>
+            p.teacher_id === teacher.id &&
+            sess.date >= p.start_date &&
+            sess.date <= p.end_date,
         );
 
-        scheduleSessions.forEach((sess) => {
-          total++;
-
-          const hasPermission = permissions.find(
-            (p) =>
-              p.teacher_id === teacher.id &&
-              sess.date >= p.start_date &&
-              sess.date <= p.end_date,
-          );
-
-          if (hasPermission) {
-            izin++;
-          } else if (sess.is_teacher_present) {
-            hadir++;
-          } else {
-            alpha++;
-          }
-        });
+        if (hasPermission) {
+          izin++;
+        } else if (sess.is_teacher_present) {
+          hadir++;
+        } else {
+          alpha++;
+        }
       });
-      console.log(
-        `[DEBUG] Teacher ${teacher.name} → total:${total}, hadir:${hadir}, izin:${izin}, alpha:${alpha}`,
-      );
 
       return {
         teacher_id: teacher.id,
@@ -144,7 +125,7 @@ class TeacherReportService {
     }
 
     const query = `
-SELECT 
+SELECT
   CONCAT(sub.name, ' (', c.name, ')') AS subject,
 
   COUNT(ses.id) AS total_pertemuan,
@@ -166,36 +147,37 @@ SELECT
 
   SUM(
     CASE
-      WHEN tp.id IS NULL AND ses.is_teacher_present = 0 THEN 1
+      WHEN tp.id IS NULL
+      AND ses.is_teacher_present = 0
+      THEN 1
       ELSE 0
     END
   ) AS alpha
 
-FROM schedules sc
-
-JOIN teaching_assignments ta
-  ON sc.teaching_assignment_id = ta.id
+FROM attendance_sessions ses
 
 LEFT JOIN subjects sub
-  ON ta.subject_id = sub.id
+  ON ses.subject_id = sub.id
 
 LEFT JOIN classes c
-  ON ta.class_id = c.id
-
-LEFT JOIN attendance_sessions ses
-  ON ses.schedule_id = sc.id
-  AND ses.date BETWEEN :start AND :end
+  ON ses.class_id = c.id
 
 LEFT JOIN teacher_permissions tp
-  ON tp.teacher_id = ta.teacher_id
+  ON tp.teacher_id = ses.teacher_id
   AND tp.status = 'approved'
   AND ses.date BETWEEN tp.start_date AND tp.end_date
 
-WHERE ta.teacher_id = :teacher_id
+WHERE
+  ses.teacher_id = :teacher_id
+  AND ses.date BETWEEN :start AND :end
 
-GROUP BY ta.subject_id, ta.class_id
+GROUP BY
+  ses.subject_id,
+  ses.class_id
 
-ORDER BY sub.name ASC, c.name ASC
+ORDER BY
+  sub.name ASC,
+  c.name ASC
 `;
 
     console.log("[DEBUG] Executing SQL...");
@@ -319,8 +301,20 @@ ORDER BY sub.name ASC, c.name ASC
     }
 
     const teachers = await sequelize.query(
-      `SELECT DISTINCT u.id,u.name FROM attendance_sessions s JOIN schedules sc ON s.schedule_id=sc.id JOIN teaching_assignments ta ON sc.teaching_assignment_id=ta.id JOIN users u ON ta.teacher_id=u.id WHERE s.date BETWEEN :start AND :end ORDER BY u.name ASC`,
-      { replacements: { start, end }, type: sequelize.QueryTypes.SELECT },
+      `
+SELECT DISTINCT
+  u.id,
+  u.name
+FROM attendance_sessions s
+JOIN users u
+  ON s.teacher_id = u.id
+WHERE s.date BETWEEN :start AND :end
+ORDER BY u.name ASC
+`,
+      {
+        replacements: { start, end },
+        type: sequelize.QueryTypes.SELECT,
+      },
     );
     console.log("[DEBUG] Total teachers:", teachers.length);
 
