@@ -75,6 +75,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/fcm", fcmRoutes);
 
 app.get("/ping", (req, res) => {
+  console.log("PING MASUK");
   res.json({ message: "Absensi API running" });
 });
 

@@ -37,7 +37,7 @@ class StudentPermissionController {
         start_date,
         end_date,
         reason,
-        proof_file: file ? file.path : null,
+        proof_file: file ? file.filename : null,
       });
 
       return res.status(201).json({

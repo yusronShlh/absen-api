@@ -116,8 +116,14 @@ TeacherPermission.hasMany(TeacherPermissionDetail, {
 TeacherPermissionDetail.belongsTo(TeacherPermission, {
   foreignKey: "permission_id",
 });
-TeacherPermissionDetail.belongsTo(Schedule, { foreignKey: "schedule_id" });
-Schedule.hasMany(TeacherPermissionDetail, { foreignKey: "schedule_id" });
+TeacherPermissionDetail.belongsTo(Schedule, {
+  foreignKey: "schedule_id",
+  onDelete: "CASCADE",
+});
+Schedule.hasMany(TeacherPermissionDetail, {
+  foreignKey: "schedule_id",
+  onDelete: "CASCADE",
+});
 // ==== RELASI RELASI DI ROLE GURU  =====
 
 // schedule -> attendance sessions
