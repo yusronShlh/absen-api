@@ -9,15 +9,12 @@ const { User, TeachingAssignment, Class } = db;
 class teacherServices {
   // GET all guru
   static async getAll(query) {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const offset = (page - 1) * limit;
+    console.log("QUERY:", query);
 
     const data = await User.findAndCountAll({
       where: { role: "guru" },
       attributes: ["id", "name", "nip"],
-      limit,
-      offset,
+
       order: [["id", "DESC"]],
     });
 

@@ -8,33 +8,36 @@ import { readStudentExcel } from "../utils/excel/studentImport.js";
 
 class StudentService {
   static async getAll(query) {
-    console.log("QUERTY:", query);
+    console.log("QUERY:", query);
 
-    const { page = 1, limit = 10, class_id } = query;
+    const { class_id } = query;
 
     console.log("Filter class_id:", class_id);
 
-    const where = { is_graduated: false };
+    const where = {
+      is_graduated: false,
+    };
 
     if (class_id) {
       where.class_id = class_id;
     }
-    const offset = (page - 1) * limit;
 
     const data = await Student.findAndCountAll({
       where,
-      limit: Number(limit),
-      offset,
-
       include: [
         {
           model: User,
           attributes: ["id", "name", "nisn", "role"],
           required: true,
         },
-        { model: Class, attributes: ["id", "name"] },
+        {
+          model: Class,
+          attributes: ["id", "name"],
+        },
       ],
+      order: [[User, "name", "ASC"]],
     });
+
     return data;
   }
   static async create(payload) {
