@@ -353,17 +353,22 @@ class StudentService {
       throw new Error("Kelas tujuan tidak ditemukan");
     }
 
-    const totalStudents = await Student.count({
+    const students = await Student.findAll({
       where: { class_id: from_class_id },
+      include: [{ model: User, required: true }],
     });
+
+    const totalStudents = students.length;
 
     if (totalStudents === 0) {
       throw new Error("Tidak ada siswa dikelas asal");
     }
 
+    const studentIds = students.map((item) => item.id);
+
     await Student.update(
       { class_id: to_class_id },
-      { where: { class_id: from_class_id } },
+      { where: { id: studentIds } },
     );
 
     return {
@@ -383,17 +388,19 @@ class StudentService {
     if (!kelas) {
       throw new Error("Kelas tidak di temukan");
     }
-    const totalStudents = await Student.count({
+    const students = await Student.findAll({
       where: { class_id, is_graduated: false },
+      include: [{ model: User, required: true }],
     });
+
+    const totalStudents = students.length;
 
     if (totalStudents === 0) {
       throw new Error("Tidak ada siswa aktif di kelas ini");
     }
-    await Student.update(
-      { is_graduated: true },
-      { where: { class_id, is_graduated: false } },
-    );
+    const studentIds = students.map((item) => item.id);
+
+    await Student.update({ is_graduated: true }, { where: { id: studentIds } });
 
     return {
       message: `Berhasil meluluskan ${totalStudents} siswa`,

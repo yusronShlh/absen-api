@@ -6,5 +6,5 @@ export const readStudentExcel = (buffer) => {
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
 
-  return XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+  return XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false });
 };
