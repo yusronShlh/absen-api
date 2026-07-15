@@ -36,7 +36,7 @@ db.TeacherNotificationLog = TeacherNotificationLog;
 db.TeachingAssignment = TeachingAssignment;
 // relations
 // User -student
-Student.belongsTo(User, { foreignKey: "user_id" });
+Student.belongsTo(User, { foreignKey: "user_id", onDelete: "CASCADE" });
 User.hasOne(Student, { foreignKey: "user_id", onDelete: "CASCADE" });
 
 // class- student(1;many)
@@ -96,10 +96,12 @@ PermissionType.hasMany(StudentPermission, {
 // student permission -> student
 StudentPermission.belongsTo(Student, {
   foreignKey: "student_id",
+  onDelete: "CASCADE",
 });
 
 Student.hasMany(StudentPermission, {
   foreignKey: "student_id",
+  onDelete: "CASCADE",
 });
 // === TEACHER PERMISSION ===
 
@@ -154,8 +156,14 @@ AttendanceSession.hasMany(AttendanceDetail, {
 });
 
 // student - detail
-AttendanceDetail.belongsTo(Student, { foreignKey: "student_id" });
-Student.hasMany(AttendanceDetail, { foreignKey: "student_id" });
+AttendanceDetail.belongsTo(Student, {
+  foreignKey: "student_id",
+  onDelete: "CASCADE",
+});
+Student.hasMany(AttendanceDetail, {
+  foreignKey: "student_id",
+  onDelete: "CASCADE",
+});
 
 // relasi permission type student
 StudentPermission.belongsTo(PermissionType, {

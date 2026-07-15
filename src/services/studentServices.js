@@ -46,7 +46,6 @@ class StudentService {
     //cek username
     const exist = await User.findOne({
       where: { nisn },
-      paranoid: false,
     });
     if (exist) {
       throw new Error("NISN sudah di gunakan");
@@ -84,7 +83,7 @@ class StudentService {
     const { name, nisn, class_id, gender } = payload;
     // cek NISN harus unik
     if (nisn !== student.User.nisn) {
-      const exist = await User.findOne({ where: { nisn }, paranoid: false });
+      const exist = await User.findOne({ where: { nisn } });
 
       if (exist) {
         throw new Error("NISN sudah di gunakan");
@@ -106,7 +105,11 @@ class StudentService {
         throw new Error("Siswa tidak di temukan");
       }
 
-      await User.destroy({ where: { id: student.user_id }, transaction: t });
+      await User.destroy({
+        where: { id: student.user_id },
+        force: true,
+        transaction: t,
+      });
 
       await t.commit();
       return true;
@@ -267,7 +270,6 @@ class StudentService {
 
       const exist = await User.findOne({
         where: { nisn },
-        paranoid: false,
       });
 
       if (exist) {

@@ -7,13 +7,7 @@ class classServices {
   static async getAll(query) {
     console.log("SERVICE getAll | query:", query);
 
-    const page = Math.max(1, Number(query.page) || 1);
-    const limit = Number(query.limit) || 10;
-    const offset = (page - 1) * limit;
-
     const data = await Class.findAndCountAll({
-      limit,
-      offset,
       order: [["id", "DESC"]],
 
       include: [

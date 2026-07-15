@@ -6,11 +6,9 @@ class classController {
       console.log("GET ALL CLASSES | query:", req.query);
 
       const data = await classServices.getAll(req.query);
-      console.log("RESULT COUNT:", data.count);
 
       res.json({
-        meta: { total: data.count, page: Number(req.query.page || 1) },
-        classes: data.rows,
+        classes: data,
       });
     } catch (err) {
       console.log("ERROR GET ALL:", err.message);
