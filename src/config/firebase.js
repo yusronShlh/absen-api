@@ -1,14 +1,14 @@
 import admin from "firebase-admin";
 import fs from "fs";
+import path from "path";
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync(
-    new URL(
-      "./notifikasi-sumpay-firebase-adminsdk-fbsvc-6ec707197d.json",
-      import.meta.url,
-    ),
-  ),
-);
+if (!process.env.FIREBASE_CREDENTIAL) {
+  throw new Error("FIREBASE_CREDENTIAL belum diatur di file .env");
+}
+
+const credentialPath = path.resolve(process.env.FIREBASE_CREDENTIAL);
+
+const serviceAccount = JSON.parse(fs.readFileSync(credentialPath, "utf-8"));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

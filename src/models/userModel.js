@@ -9,7 +9,7 @@ const User = sequelize.define(
     // untuk admin
     username: { type: DataTypes.STRING, allowNull: true, unique: true },
     password: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.ENUM("admin", "guru", "siswa") },
+    role: { type: DataTypes.ENUM("admin", "guru", "siswa", "principal") },
     // khusus siswa
     nisn: { type: DataTypes.STRING, allowNull: true, unique: true },
     // khusus guru

@@ -1,4 +1,6 @@
 .env
 /node_modules
-src/config/notifikasi-sumpay-firebase-adminsdk-fbsvc-bd711b93d5.json
+# di laptop 
+src/config/notifikasi-laptop.json
+# di server
 src/config/notifikasi-sumpay-firebase-adminsdk-fbsvc-6ec707197d.json
