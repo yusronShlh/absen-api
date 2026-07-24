@@ -46,29 +46,38 @@ class teacherServices {
   }
 
   static async update(id, data) {
-    const { name, nip } = data;
+    const { name, nip, password } = data;
 
     const teacher = await User.findByPk(id);
     if (!teacher) {
       throw new Error("Data guru tidak di temukan");
     }
 
-    if (teacher.role !== "guru" && nip) {
-      const exist = await User.findOne({ where: { nip, id: { [Op.ne]: id } } });
+    if (teacher.role !== "guru") {
+      throw new Error("Data ini bukan guru");
+    }
+
+    if (nip && nip !== teacher.nip) {
+      const exist = await User.findOne({
+        where: {
+          nip,
+          id: {
+            [Op.ne]: id,
+          },
+        },
+      });
 
       if (exist) {
         throw new Error("NIP sudah di gunakan");
       }
-
-      // if (!name && !nip) {
-      //   throw new Error("Minimal satu field harus diubah");
-      // }
     }
 
-    await teacher.update({
-      name: name ?? teacher.name,
-      nip: nip ?? teacher.nip,
-    });
+    const updateData = { name: name ?? teacher.name, nip: nip ?? teacher.nip };
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    await teacher.update(updateData);
   }
 
   static async delete(id) {

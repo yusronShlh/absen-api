@@ -80,7 +80,7 @@ class StudentService {
       throw new Error("Siswa tidak di temukan");
     }
 
-    const { name, nisn, class_id, gender } = payload;
+    const { name, nisn, class_id, gender, password } = payload;
     // cek NISN harus unik
     if (nisn !== student.User.nisn) {
       const exist = await User.findOne({ where: { nisn } });
@@ -90,7 +90,12 @@ class StudentService {
       }
     }
 
-    await student.User.update({ name, nisn });
+    const userData = { name, nisn };
+    if (password) {
+      userData.password = await bcrypt.hash(password, 10);
+    }
+
+    await student.User.update(userData);
 
     await student.update({ class_id, gender });
     return true;

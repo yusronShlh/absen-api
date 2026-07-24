@@ -28,6 +28,10 @@ import path from "path";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import fcmRoutes from "./routes/fcmRoutes.js";
 import appVersionRoutes from "./routes/appVersionRoutes.js";
+import principalDashboardRoutes from "./routes/principal/dashboardRoutes.js";
+import principalTeacherRoutes from "./routes/principal/teacherRoutes.js";
+import principalClassRoutes from "./routes/principal/classRoutes.js";
+import principalStudentRoutes from "./routes/principal/studentRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -58,6 +62,11 @@ app.use("/api/admin/reports/teacher-attendance", teacherReportRoutes);
 app.use("/api/admin/semesters", semesterRoutes);
 app.use("/api/admin/teaching-assignments", teachingAssignmentRoutes);
 app.use("/api/admin/profile", adminProfileRoutes);
+
+app.use("/api/principal/dashboard", principalDashboardRoutes);
+app.use("/api/principal/teachers", principalTeacherRoutes);
+app.use("/api/principal/classes", principalClassRoutes);
+app.use("/api/principal/students", principalStudentRoutes);
 
 app.use("/api/teacher", teacherAttendanceRoutes);
 app.use("/api/teacher/dashboard", teacherDashboardRoutes);

@@ -32,7 +32,7 @@ class studentController {
 
   static async update(req, res) {
     try {
-      const { name, nisn, class_id, gender } = req.body;
+      const { name, nisn, class_id, gender, password } = req.body;
       if (!name || !nisn || !class_id || !gender) {
         return res.status(400).json({ message: "Semua field wajib di isi" });
       }
@@ -42,6 +42,7 @@ class studentController {
         nisn,
         class_id,
         gender,
+        password,
       });
 
       res.json({ message: "Data siswa telah di perbarui" });
