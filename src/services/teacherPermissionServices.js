@@ -9,6 +9,38 @@ function buildFileUrl(file) {
   return `${BASE_URL}/uploads/teacher-permissions/${file}`;
 }
 
+const permissionInclude = [
+  { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
+  {
+    model: db.TeacherPermissionDetail,
+    as: "details",
+    include: [
+      {
+        model: db.Schedule,
+        include: [
+          {
+            model: db.TeachingAssignment,
+            include: [
+              { model: db.Subject, attributes: ["id", "name"] },
+              { model: db.Class, attributes: ["id", "name"] },
+              { model: db.User, as: "teacher", attributes: ["id", "name"] },
+            ],
+          },
+          { model: db.LessonTime, attributes: ["start_time", "end_time"] },
+        ],
+      },
+    ],
+  },
+];
+
+function formatPermissions(data) {
+  return data.map((item) => {
+    const obj = item.toJSON();
+    obj.letter = buildFileUrl(obj.letter);
+    return obj;
+  });
+}
+
 class TeacherPermissionServices {
   static async getAll() {
     console.log("[SERVICE] getAll teacher permissions");
@@ -18,49 +50,41 @@ class TeacherPermissionServices {
     console.log("Now:", new Date());
     console.log("WIB:", getWIBDate());
 
-    const data = await TeacherPermission.findAll({
-      where: { start_date: { [Op.lte]: today }, end_date: { [Op.gte]: today } },
-      include: [
-        { model: User, as: "teacher", attributes: ["id", "name", "nip"] },
-        {
-          model: db.TeacherPermissionDetail,
-          as: "details",
-          include: [
-            {
-              model: db.Schedule,
-              include: [
-                {
-                  model: db.TeachingAssignment,
-                  include: [
-                    { model: db.Subject, attributes: ["id", "name"] },
-                    { model: db.Class, attributes: ["id", "name"] },
-                    {
-                      model: db.User,
-                      as: "teacher",
-                      attributes: ["id", "name"],
-                    },
-                  ],
-                },
-                {
-                  model: db.LessonTime,
-                  attributes: ["start_time", "end_time"],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+    const sevenDaysAgo = new Date(getWIBDate());
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const limitDate = sevenDaysAgo.toISOString().split("T")[0];
+
+    const pending = await TeacherPermission.findAll({
+      where: { status: "pending" },
+      include: permissionInclude,
       order: [["createdAt", "DESC"]],
     });
-    console.log("✅ Total permissions:", data.length);
 
-    const result = data.map((item) => {
-      const obj = item.toJSON();
-      obj.letter = buildFileUrl(obj.letter);
-      return obj;
+    const active = await TeacherPermission.findAll({
+      where: {
+        status: "approved",
+        start_date: { [Op.lte]: today },
+        end_date: { [Op.gte]: today },
+      },
+      include: permissionInclude,
+      order: [["start_date", "ASC"]],
     });
 
-    return result;
+    const recent = await TeacherPermission.findAll({
+      where: {
+        status: { [Op.in]: ["approved", "rejected"] },
+        end_date: { [Op.gte]: limitDate, [Op.lt]: today },
+      },
+      include: permissionInclude,
+      order: [["end_date", "DESC"]],
+    });
+
+    return {
+      pending: formatPermissions(pending),
+      active: formatPermissions(active),
+      recent: formatPermissions(recent),
+    };
   }
 
   static async getById(id) {

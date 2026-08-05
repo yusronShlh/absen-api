@@ -32,6 +32,7 @@ import principalDashboardRoutes from "./routes/principal/dashboardRoutes.js";
 import principalTeacherRoutes from "./routes/principal/teacherRoutes.js";
 import principalClassRoutes from "./routes/principal/classRoutes.js";
 import principalStudentRoutes from "./routes/principal/studentRoutes.js";
+import principalPermissionRoutes from "./routes/principal/permissionRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -67,6 +68,7 @@ app.use("/api/principal/dashboard", principalDashboardRoutes);
 app.use("/api/principal/teachers", principalTeacherRoutes);
 app.use("/api/principal/classes", principalClassRoutes);
 app.use("/api/principal/students", principalStudentRoutes);
+app.use("/api/principal/permissions", principalPermissionRoutes);
 
 app.use("/api/teacher", teacherAttendanceRoutes);
 app.use("/api/teacher/dashboard", teacherDashboardRoutes);

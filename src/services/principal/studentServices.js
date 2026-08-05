@@ -112,7 +112,7 @@ class PrincipalStudentService {
           include: [
             {
               model: AttendanceSession,
-              attributes: ["date"],
+              attributes: ["date", "meeting_number"],
 
               where: {
                 schedule_id: {
@@ -130,33 +130,17 @@ class PrincipalStudentService {
             student_id: student.id,
           },
 
-          order: [[AttendanceSession, "date", "ASC"]],
+          order: [[AttendanceSession, "meeting_number", "ASC"]],
 
           raw: true,
         });
-
-        const uniqueDates = [
-          ...new Set(
-            attendances.map(
-              (attendance) => attendance["AttendanceSession.date"],
-            ),
-          ),
-        ];
 
         let hadir = 0;
         let izin = 0;
         let sakit = 0;
         let alpha = 0;
 
-        const pertemuan = uniqueDates.map((date) => {
-          const attendance = attendances.find(
-            (item) => item["AttendanceSession.date"] === date,
-          );
-
-          if (!attendance) {
-            return "-";
-          }
-
+        const pertemuan = attendances.map((attendance) => {
           switch (attendance.status) {
             case "hadir":
               hadir++;

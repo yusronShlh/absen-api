@@ -3,6 +3,7 @@ import authMiddleware from "../../middlewares/authMiddleware.js";
 import roleMiddleware from "../../middlewares/roleMiddleware.js";
 import uploadPermission from "../../middlewares/uploadPermissionMiddleware.js";
 import TeacherPermissionControllers from "../../controllers/teacher/teacherPermissionController.js";
+import convertHeicMiddleware from "../../middlewares/convertHeicMiddleware.js";
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.get(
 router.post(
   "/",
   uploadPermission.single("letter"),
+  convertHeicMiddleware,
   TeacherPermissionControllers.create,
 );
 

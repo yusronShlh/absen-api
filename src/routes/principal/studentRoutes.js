@@ -1,9 +1,9 @@
-import { Router } from "express";
+import express from "express";
 import authMiddleware from "../../middlewares/authMiddleware.js";
 import roleMiddleware from "../../middlewares/roleMiddleware.js";
 import PrincipalStudentController from "../../controllers/principal/studentController.js";
 
-const router = Router();
+const router = express.Router();
 
 router.use(authMiddleware);
 router.use(roleMiddleware("principal"));

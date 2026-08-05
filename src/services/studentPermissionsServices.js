@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
-import { getWIBDateString } from "../utils/timeHelper.js";
+import { getWIBDateString, getWIBDate } from "../utils/timeHelper.js";
 
 const {
   StudentPermission,
@@ -19,35 +19,75 @@ function buildStudentFileUrl(file) {
   return `${BASE_URL}/uploads/student-permissions/${file}`;
 }
 
+const permissionInclude = [
+  {
+    model: Student,
+    attributes: ["id"],
+    include: [
+      { model: User, attributes: ["id", "name", "nisn"] },
+      { model: Class, attributes: ["id", "name"] },
+    ],
+  },
+];
+
+function formatPermissions(data) {
+  return data.map((item) => {
+    const obj = item.toJSON();
+    obj.letter = buildStudentFileUrl(obj.proof_file);
+    return obj;
+  });
+}
+
 class StudentPermissionService {
   static async getAll() {
     console.log("[SERVICE] getAll permissions");
 
     const today = getWIBDateString();
-    console.log("Today: ", today);
-    const data = await StudentPermission.findAll({
-      where: { start_date: { [Op.lte]: today }, end_date: { [Op.gte]: today } },
-      include: [
-        {
-          model: Student,
-          attributes: ["id"],
-          include: [
-            { model: User, attributes: ["id", "name", "nisn"] },
-            { model: Class, attributes: ["id", "name"] },
-          ],
-        },
-      ],
+
+    const sevenDaysAgo = new Date(getWIBDate());
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const limitDate = sevenDaysAgo.toISOString().split("T")[0];
+
+    const pending = await StudentPermission.findAll({
+      where: { status: "pending" },
+      include: permissionInclude,
       order: [["createdAt", "DESC"]],
     });
-    console.log(`[SERVICE] Found ${data.length} permissions`);
 
-    const result = data.map((item) => {
-      const obj = item.toJSON();
-      obj.letter = buildStudentFileUrl(obj.proof_file);
-      return obj;
+    const active = await StudentPermission.findAll({
+      where: {
+        status: "approved",
+        start_date: {
+          [Op.lte]: today,
+        },
+        end_date: {
+          [Op.gte]: today,
+        },
+      },
+      include: permissionInclude,
+      order: [["start_date", "ASC"]],
     });
 
-    return result;
+    const recent = await StudentPermission.findAll({
+      where: {
+        status: {
+          [Op.in]: ["approved", "rejected"],
+        },
+        end_date: {
+          [Op.gte]: limitDate,
+          [Op.lt]: today,
+        },
+      },
+      include: permissionInclude,
+      order: [["end_date", "DESC"]],
+    });
+
+    return {
+      pending: formatPermissions(pending),
+      active: formatPermissions(active),
+      recent: formatPermissions(recent),
+    };
   }
 
   static async getById(id) {
