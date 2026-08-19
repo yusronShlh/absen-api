@@ -1,5 +1,10 @@
 import StudentReportService from "../services/studentReportServices.js";
 import PDFDocument from "pdfkit";
+import {
+  getCurrentWIBMonth,
+  getCurrentWIBYear,
+  getMonthName,
+} from "../utils/timeHelper.js";
 
 class StudentReportController {
   static async getReport(req, res) {
@@ -113,8 +118,11 @@ class StudentReportController {
       const { semester_id, month, year, class_id, subject_id } = req.query;
 
       if (!class_id) {
-        return res.status(400).json({ message: "Kelas wajib di isi" });
+        return res.status(400).json({
+          message: "Kelas wajib di isi",
+        });
       }
+
       const result = await StudentReportService.getReport({
         semester_id,
         month,
@@ -123,17 +131,26 @@ class StudentReportController {
         subject_id,
       });
 
-      const doc = new PDFDocument({ margin: 40, size: "A4" });
+      const doc = new PDFDocument({
+        margin: 30,
+        size: "A4",
+        layout: "landscape",
+      });
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=student-report.pdf",
       );
+
       doc.pipe(res);
 
-      const drawRow = (y, columns, widths) => {
-        let x = doc.page.margins.left;
+      // =========================================================
+      // HELPER
+      // =========================================================
+
+      const drawRow = (xStart, y, columns, widths) => {
+        let x = xStart;
 
         columns.forEach((text, i) => {
           doc
@@ -142,80 +159,234 @@ class StudentReportController {
             .fontSize(10)
             .text(String(text), x + 5, y + 5, {
               width: widths[i] - 10,
+              height: 10,
               align: "center",
+              lineBreak: false,
             });
 
           x += widths[i];
         });
       };
-      let y = 80;
 
-      doc
-        .fontSize(16)
-        .text("LAPORAN ABSENSI SISWA", 0, 40, { align: "center" });
+      const getTableStartX = (widths) => {
+        const tableWidth = widths.reduce((total, width) => total + width, 0);
 
-      if (semester_id) {
-        doc
-          .fontSize(10)
-          .text(`Periode Semester ${result.semester}`, { align: "center" });
-      } else {
-        doc
-          .fontSize(10)
-          .text(`Periode Bulan ${month}/${year}`, { align: "center" });
-      }
+        const availableWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+        return doc.page.margins.left + (availableWidth - tableWidth) / 2;
+      };
+
+      const getSubjectChunks = (subjects) => {
+        const availableWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+        // Lebar kolom nama siswa
+        const nameWidth = 160;
+
+        // Padding kiri + kanan untuk teks nama mapel
+        const subjectPadding = 20;
+
+        // Lebar minimal kolom mapel
+        const minSubjectWidth = 60;
+
+        const chunks = [];
+
+        let currentChunk = [];
+        let currentWidth = nameWidth;
+
+        subjects.forEach((subject) => {
+          const subjectText = String(subject);
+
+          const textWidth =
+            doc.widthOfString(subjectText, {
+              fontSize: 10,
+            }) + subjectPadding;
+
+          const subjectWidth = Math.max(textWidth, minSubjectWidth);
+
+          // Kalau mapel berikutnya tidak muat,
+          // buat kelompok mapel baru.
+          if (
+            currentChunk.length > 0 &&
+            currentWidth + subjectWidth > availableWidth
+          ) {
+            chunks.push(currentChunk);
+
+            currentChunk = [];
+            currentWidth = nameWidth;
+          }
+
+          currentChunk.push({
+            name: subjectText,
+            width: subjectWidth,
+          });
+
+          currentWidth += subjectWidth;
+        });
+
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk);
+        }
+
+        return chunks;
+      };
+
+      const drawReportHeader = (title = "LAPORAN ABSENSI SISWA") => {
+        let headerY = 40;
+
+        doc.fontSize(16).text(title, 0, headerY, {
+          align: "center",
+        });
+
+        headerY += 22;
+
+        if (semester_id) {
+          doc.fontSize(10).text(`Periode Semester ${result.semester}`, {
+            align: "center",
+          });
+        } else {
+          doc
+            .fontSize(10)
+            .text(`Periode Bulan ${getMonthName(month)} ${year}`, {
+              align: "center",
+            });
+        }
+
+        headerY += 18;
+
+        doc.fontSize(11).text(`Kelas : ${result.class_name}`, 30, headerY);
+
+        headerY += 14;
+
+        if (semester_id) {
+          doc.text(
+            `Semester : ${result.semester} (${result.academic_year})`,
+            30,
+            headerY,
+          );
+        } else {
+          doc.text(`Periode : ${getMonthName(month)} ${year}`, 30, headerY);
+        }
+
+        return headerY + 22;
+      };
+
+      // =========================================================
+      // MODE SEMUA MAPEL
+      // =========================================================
 
       if (!subject_id) {
         const { subjects, data } = result;
 
-        doc.fontSize(12).text(`Kelas: ${result.class_name}`, 40, y);
-        y += 15;
+        const subjectChunks = getSubjectChunks(subjects);
 
-        doc.text(
-          `Semester: ${result.semester} (${result.academic_year})`,
-          40,
-          y,
-        );
-        y += 20;
+        subjectChunks.forEach((currentSubjects, chunkIndex) => {
+          if (chunkIndex > 0) {
+            doc.addPage();
+          }
 
-        const headers = ["Nama", ...subjects];
+          let y = drawReportHeader();
 
-        const widths = [
-          120,
-          ...subjects.map(() => (500 - 120) / subjects.length),
-        ];
+          const headers = [
+            "Nama",
+            ...currentSubjects.map((subject) => subject.name),
+          ];
 
-        drawRow(y, headers, widths);
-        y += 20;
+          const widths = [
+            160,
+            ...currentSubjects.map((subject) => subject.width),
+          ];
 
-        data.forEach((row) => {
-          const values = [row.name, ...subjects.map((s) => row[s] || 0)];
+          const startX = getTableStartX(widths);
 
-          drawRow(y, values, widths);
+          drawRow(startX, y, headers, widths);
+
           y += 20;
 
-          if (y > 750) {
-            doc.addPage();
-            y = 50;
-          }
+          // -----------------------------------------------------
+          // DATA SISWA
+          // -----------------------------------------------------
+
+          data.forEach((row) => {
+            const values = [
+              row.name,
+              ...currentSubjects.map((subject) => row[subject.name] || 0),
+            ];
+
+            drawRow(startX, y, values, widths);
+
+            y += 20;
+
+            // ---------------------------------------------------
+            // Kalau siswa sudah tidak muat secara vertikal
+            // ---------------------------------------------------
+
+            if (y + 20 > doc.page.height - doc.page.margins.bottom) {
+              doc.addPage();
+
+              y = 40;
+
+              doc.fontSize(14).text("LAPORAN ABSENSI SISWA (Lanjutan)", 0, y, {
+                align: "center",
+              });
+
+              y += 24;
+
+              // Header tabel diulang
+              drawRow(startX, y, headers, widths);
+
+              y += 20;
+            }
+          });
         });
       } else {
         const { subject, data } = result;
 
+        let y = 80;
+
+        doc.fontSize(16).text("LAPORAN ABSENSI SISWA", 0, 40, {
+          align: "center",
+        });
+
+        if (semester_id) {
+          doc.fontSize(10).text(`Periode Semester ${result.semester}`, {
+            align: "center",
+          });
+        } else {
+          doc.fontSize(10).text(`Periode Bulan ${month}/${year}`, {
+            align: "center",
+          });
+        }
+
         doc.fontSize(12).text(`Kelas: ${result.class_name}`, 40, y);
+
         y += 15;
-        doc.text(
-          `Semester: ${result.semester} (${result.academic_year})`,
-          40,
-          y,
-        );
+
+        if (semester_id) {
+          doc.text(
+            `Semester: ${result.semester} (${result.academic_year})`,
+            40,
+            y,
+          );
+        } else {
+          doc.text(`Periode: ${getMonthName(month)} ${year}`, 40, y);
+        }
+
         y += 15;
+
         doc.text(`Mata Pelajaran: ${subject}`, 40, y);
+
         y += 20;
 
-        const headers = ["Nama", "Total", "Hadir", "izin", "Sakit", "Alpha"];
-        const widths = [120, 60, 60, 60, 60, 60];
+        const headers = ["Nama", "Total", "Hadir", "Izin", "Sakit", "Alpha"];
 
-        drawRow(y, headers, widths);
+        const widths = [160, 70, 70, 70, 70, 70];
+
+        const startX = getTableStartX(widths);
+
+        drawRow(startX, y, headers, widths);
+
         y += 20;
 
         data.forEach((row) => {
@@ -228,12 +399,24 @@ class StudentReportController {
             row.alpha,
           ];
 
-          drawRow(y, values, widths);
+          drawRow(startX, y, values, widths);
+
           y += 20;
 
-          if (y > 750) {
+          if (y + 20 > doc.page.height - doc.page.margins.bottom) {
             doc.addPage();
+
             y = 50;
+
+            doc.fontSize(14).text("LAPORAN ABSENSI SISWA (Lanjutan)", 0, y, {
+              align: "center",
+            });
+
+            y += 24;
+
+            drawRow(startX, y, headers, widths);
+
+            y += 20;
           }
         });
       }
@@ -241,7 +424,10 @@ class StudentReportController {
       doc.end();
     } catch (err) {
       console.error("[ERROR EXPORT PDF STUDENT]", err.message);
-      res.status(500).json({ message: err.message });
+
+      res.status(500).json({
+        message: err.message,
+      });
     }
   }
 }

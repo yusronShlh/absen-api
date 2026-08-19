@@ -34,3 +34,22 @@ export function getCurrentWIBYear() {
 export function getCurrentWIBMonth() {
   return getWIBDate().getMonth() + 1;
 }
+
+export const getMonthName = (month) => {
+  const months = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+
+  return months[Number(month) - 1] || month;
+};
